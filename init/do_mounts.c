@@ -315,7 +315,11 @@ EXPORT_SYMBOL_GPL(name_to_dev_t);
 
 static int __init root_dev_setup(char *line)
 {
-	strlcpy(saved_root_name, line, sizeof(saved_root_name));
+#ifdef CONFIG_CMDLINE_FORCE_INITRAMFS
+	pr_info("Ignoring root= cmdline parameter (forced initramfs mode)\n");
+	return 1;
+#endif
+	strscpy(saved_root_name, line, sizeof(saved_root_name));
 	return 1;
 }
 
