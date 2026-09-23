@@ -10,10 +10,49 @@
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
 #include <linux/dma-noncoherent.h>
+#ifdef CONFIG_ION_REMAP_OLD_HEAP_ID
+#include <linux/file.h>
+#include <linux/dcache.h>
+#include <linux/sched.h>
+#include <linux/msm_ion_ids.h>
+#endif
 
 #define CREATE_TRACE_POINTS
 #include "ion_trace.h"
 #include "ion_private.h"
+
+#ifdef CONFIG_ION_REMAP_OLD_HEAP_ID
+#define ION_OLD_CP_MM_HEAP_ID            BIT(8)
+#define ION_OLD_SECURE_HEAP_ID           BIT(9)
+#define ION_OLD_SECURE_DISPLAY_HEAP_ID   BIT(10)
+#define ION_OLD_SPSS_HEAP_ID             BIT(13)
+#define ION_OLD_SECURE_CARVEOUT_HEAP_ID  BIT(14)
+#define ION_OLD_QSECOM_TA_HEAP_ID        BIT(19)
+#define ION_OLD_CAMERA_HEAP_ID           BIT(20)
+#define ION_OLD_ADSP_HEAP_ID             BIT(22)
+#define ION_OLD_USER_CONTIG_HEAP_ID      BIT(26)
+#define ION_OLD_QSECOM_HEAP_ID           BIT(27)
+#define ION_OLD_AUDIO_HEAP_ID            BIT(28)
+
+#define ION_REMAP(mask, old, new, name) \
+	do { \
+		if ((mask) & (old)) { \
+			struct file *exe_file = get_task_exe_file(current); \
+			char path_buf[256]; \
+			char *path = "unknown"; \
+			if (exe_file) { \
+				path = d_path(&exe_file->f_path, path_buf, sizeof(path_buf)); \
+				if (IS_ERR(path)) path = "unknown"; \
+			} \
+			pr_err("ion: %s [%d] (%s): remapping legacy heap 0x%x -> 0x%x (%s)\n", \
+			       current->comm, task_pid_nr(current), path, \
+			       (old), (new), (name)); \
+			if (exe_file) fput(exe_file); \
+			(mask) &= ~(old); \
+			(mask) |= (new); \
+		} \
+	} while (0)
+#endif
 
 static atomic_long_t total_heap_bytes;
 
@@ -139,6 +178,31 @@ struct ion_buffer *ion_buffer_alloc(struct ion_device *dev, size_t len,
 	if (!dev || !len) {
 		return ERR_PTR(-EINVAL);
 	}
+
+#ifdef CONFIG_ION_REMAP_OLD_HEAP_ID
+	ION_REMAP(heap_id_mask, ION_OLD_QSECOM_HEAP_ID,
+		  ION_QSECOM_HEAP_ID,          "ION_QSECOM_HEAP_ID");
+	ION_REMAP(heap_id_mask, ION_OLD_QSECOM_TA_HEAP_ID,
+		  ION_QSECOM_TA_HEAP_ID,       "ION_QSECOM_TA_HEAP_ID");
+	ION_REMAP(heap_id_mask, ION_OLD_ADSP_HEAP_ID,
+		  ION_ADSP_HEAP_ID,            "ION_ADSP_HEAP_ID");
+	ION_REMAP(heap_id_mask, ION_OLD_CAMERA_HEAP_ID,
+		  ION_CAMERA_HEAP_ID,          "ION_CAMERA_HEAP_ID");
+	ION_REMAP(heap_id_mask, ION_OLD_AUDIO_HEAP_ID,
+		  ION_AUDIO_HEAP_ID,           "ION_AUDIO_HEAP_ID");
+	ION_REMAP(heap_id_mask, ION_OLD_CP_MM_HEAP_ID,
+		  ION_CP_MM_HEAP_ID,           "ION_CP_MM_HEAP_ID");
+	ION_REMAP(heap_id_mask, ION_OLD_SECURE_HEAP_ID,
+		  ION_SECURE_HEAP_ID,          "ION_SECURE_HEAP_ID");
+	ION_REMAP(heap_id_mask, ION_OLD_SECURE_DISPLAY_HEAP_ID,
+		  ION_SECURE_DISPLAY_HEAP_ID,  "ION_SECURE_DISPLAY_HEAP_ID");
+	ION_REMAP(heap_id_mask, ION_OLD_SPSS_HEAP_ID,
+		  ION_SPSS_HEAP_ID,            "ION_SPSS_HEAP_ID");
+	ION_REMAP(heap_id_mask, ION_OLD_SECURE_CARVEOUT_HEAP_ID,
+		  ION_SECURE_CARVEOUT_HEAP_ID, "ION_SECURE_CARVEOUT_HEAP_ID");
+	ION_REMAP(heap_id_mask, ION_OLD_USER_CONTIG_HEAP_ID,
+		  ION_USER_CONTIG_HEAP_ID,     "ION_USER_CONTIG_HEAP_ID");
+#endif
 
 	if (heap_id_mask & ION_HEAP_SYSTEM) {
 		get_task_comm(task_comm, current->group_leader);

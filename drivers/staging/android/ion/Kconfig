@@ -11,4 +11,11 @@ menuconfig ION
 	  If you're not using Android its probably safe to
 	  say N here.
 
+config ION_REMAP_OLD_HEAP_ID
+	bool "Remap old heap id to updated ones"
+	depends on ION
+	help
+	  Remap old heap id used by legacy userspace blobs
+	  to updated ones.
+
 source "drivers/staging/android/ion/heaps/Kconfig"
