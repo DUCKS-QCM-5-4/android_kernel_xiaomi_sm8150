@@ -45,12 +45,57 @@ int ion_free(struct ion_buffer *buffer)
 }
 EXPORT_SYMBOL_GPL(ion_free);
 
+#define CONFIG_ION_LEGACY_HEAP_ID_MASK 1
+#if defined(CONFIG_ION_LEGACY_HEAP_ID_MASK)
+static const struct {
+	unsigned int old_mask;
+	unsigned int new_mask;
+	const char  *name;
+} ion_legacy_heap_map[] = {
+	{ 1U << 27, 1U << 7,  "ION_QSECOM_HEAP_ID"          },
+	{ 1U << 26, 1U << 6,  "ION_USER_CONTIG_HEAP_ID"     },
+	{ 1U << 25, 1U << 25, "ION_SYSTEM_HEAP_ID"          },
+	{ 1U << 28, 1U << 8,  "ION_AUDIO_HEAP_ID"           },
+	{ 1U << 22, 1U << 4,  "ION_ADSP_HEAP_ID"            },
+	{ 1U << 20, 1U << 2,  "ION_CAMERA_HEAP_ID"          },
+	{ 1U << 19, 1U << 1,  "ION_QSECOM_TA_HEAP_ID"       },
+	{ 1U << 14, 1U << 15, "ION_SECURE_CARVEOUT_HEAP_ID" },
+	{ 1U << 13, 1U << 14, "ION_SPSS_HEAP_ID"            },
+	{ 1U << 10, 1U << 11, "ION_SECURE_DISPLAY_HEAP_ID"  },
+	{ 1U << 9,  1U << 10, "ION_SECURE_HEAP_ID"          },
+	{ 1U << 8,  1U << 9,  "ION_CP_MM_HEAP_ID"           },
+};
+
+static unsigned int ion_remap_legacy_heap_mask(unsigned int heap_id_mask)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(ion_legacy_heap_map); i++) {
+		if (heap_id_mask == ion_legacy_heap_map[i].old_mask) {
+			pr_err("ion: remapping legacy heap_mask %s 0x%x -> 0x%x\n",
+					ion_legacy_heap_map[i].name,
+					heap_id_mask,
+					ion_legacy_heap_map[i].new_mask);
+			return ion_legacy_heap_map[i].new_mask;
+		}
+	}
+	return heap_id_mask;
+}
+#else
+static unsigned int ion_remap_legacy_heap_mask(unsigned int heap_id_mask)
+{
+	return heap_id_mask;
+}
+#endif
+
 static int ion_alloc_fd(size_t len, unsigned int heap_id_mask,
 			unsigned int flags)
 {
 	int fd;
 	struct dma_buf *dmabuf;
-
+// #if defined(CONFIG_ION_LEGACY_HEAP_ID_MASK)
+	heap_id_mask = ion_remap_legacy_heap_mask(heap_id_mask);
+// #endif/
 	dmabuf = ion_dmabuf_alloc(internal_dev, len, heap_id_mask, flags);
 	if (IS_ERR(dmabuf))
 		return PTR_ERR(dmabuf);
