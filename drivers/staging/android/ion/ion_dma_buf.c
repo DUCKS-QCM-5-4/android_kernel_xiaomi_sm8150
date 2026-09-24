@@ -10,7 +10,10 @@
 #include <linux/scatterlist.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
-
+#ifdef CONFIG_ION_REMAP_OLD_HEAP_ID
+#include <linux/file.h>
+#include <linux/dcache.h>
+#endif
 #include "ion_private.h"
 
 static struct sg_table *dup_sg_table(struct sg_table *table)
@@ -362,9 +365,25 @@ struct dma_buf *ion_dmabuf_alloc(struct ion_device *dev, size_t len,
 	struct ion_buffer *buffer;
 	DEFINE_DMA_BUF_EXPORT_INFO(exp_info);
 	struct dma_buf *dmabuf;
+#ifdef CONFIG_ION_REMAP_OLD_HEAP_ID
+	struct file *exe_file;
+	char path_buf[256];
+	char *path = "unknown";
 
+	exe_file = get_task_exe_file(current);
+	if (exe_file) {
+		path = d_path(&exe_file->f_path, path_buf, sizeof(path_buf));
+		if (IS_ERR(path))
+			path = "unknown";
+	}
+
+	pr_err("%s: caller '%s' [PID %d] (%s) len %zu heap_id_mask 0x%x flags 0x%x\n",
+			__func__, current->comm, task_pid_nr(current), path,
+			len, heap_id_mask, flags);
+#else
 	pr_debug("%s: len %zu heap_id_mask %u flags %x\n", __func__,
 		 len, heap_id_mask, flags);
+#endif
 
 	buffer = ion_buffer_alloc(dev, len, heap_id_mask, flags);
 	if (IS_ERR(buffer))
