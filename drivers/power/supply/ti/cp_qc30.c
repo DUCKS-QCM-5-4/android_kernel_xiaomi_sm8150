@@ -299,21 +299,21 @@ static void cp_update_bms_ibat(void)
 
 static int qc3_get_bms_fastcharge_mode(void)
 {
-	int rc, pval = 0;
+	int rc, val = 0;
 
 	if (!is_qc3_iio_available(the_chip))
 		return 0;
 
 	rc = cp_qc3_get_psy_iio_property(
-		the_chip, CP_QC3_PSY_IIO_BQ_FASTCHARGE_MODE, &pval);
+		the_chip, CP_QC3_PSY_IIO_BQ_FASTCHARGE_MODE, &val);
 	if (rc < 0) {
 		pr_info("Couldn't get fastcharge mode:%d\n", rc);
 		return 0;
 	}
 
-	pm_state.bms_fastcharge_mode = pval;
+	pm_state.bms_fastcharge_mode = val;
 
-	return pval;
+	return val;
 }
 
 /* get thermal level from battery power supply property */
@@ -346,24 +346,24 @@ static int qc3_get_batt_current_thermal_level(int *level)
 /* determine whether to disable cp according to jeita status */
 static bool qc3_disable_cp_by_jeita_status(void)
 {
-	int batt_temp = 0, bq_input_suspend = 0, val2 = 0;
+	int batt_temp = 0, bq_input_suspend = 0, val = 0;
 	int ret;
 
 	if (!is_qc3_iio_available(the_chip))
 		return false;
 
 	ret = cp_qc3_get_psy_iio_property(the_chip, CP_QC3_PSY_IIO_BQ_INPUT_SUSPEND,
-					&val2);
+					&val);
 	if (!ret)
-		bq_input_suspend = !!val2;
+		bq_input_suspend = !!val;
 
-	ret = cp_qc3_get_psy_iio_property(the_chip, CP_QC3_PSY_IIO_TEMP, &val2);
+	ret = cp_qc3_get_psy_iio_property(the_chip, CP_QC3_PSY_IIO_TEMP, &val);
 	if (ret < 0) {
 		pr_info("Couldn't get batt temp prop:%d\n", ret);
 		return false;
 	}
 
-	batt_temp = val2;
+	batt_temp = val;
 	pr_err("batt_temp: %d\n", batt_temp);
 
 	if (bq_input_suspend) {
@@ -548,7 +548,7 @@ static int cp_enable_fc(bool enable)
 
 static int cp_set_qc_bus_protections(int hvdcp3_type)
 {
-	int ret, val;
+	int ret, val = 0;
 
 	if (!is_qc3_iio_available(the_chip))
 		return -ENODEV;

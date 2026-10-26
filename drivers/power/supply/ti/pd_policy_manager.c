@@ -248,44 +248,44 @@ static int pd_get_batt_current_thermal_level(struct usbpd_pm *pdpm, int *level)
 
 static int pd_get_batt_capacity(struct usbpd_pm *pdpm, int *capacity)
 {
-	int rc = 0, pval = 0;
+	int rc = 0, val = 0;
 
 	if (!is_pd_pl_ext_iio_available(pdpm))
 		return -ENODEV;
 
 	rc = pd_pl_get_psy_iio_property(pdpm, PD_PL_PSY_IIO_CAPACITY,
-				       &pval);
+				       &val);
 	if (rc < 0) {
 		pr_info("Couldn't get fastcharge mode:%d\n", rc);
 		return rc;
 	}
 
-	pr_err("pval: %d\n", pval);
-	*capacity = pval;
+	pr_err("val: %d\n", val);
+	*capacity = val;
 	return rc;
 }
 
 /* determine whether to disable cp according to jeita status */
 static bool pd_disable_cp_by_jeita_status(struct usbpd_pm *pdpm)
 {
-	int rc, batt_temp = 0, bq_input_suspend = 0, pval = 0;
+	int rc, batt_temp = 0, bq_input_suspend = 0, val = 0;
 
 	if (!is_pd_pl_ext_iio_available(pdpm))
 		return -ENODEV;
 
 	rc = pd_pl_get_psy_iio_property(
-		pdpm, PD_PL_PSY_IIO_BQ_INPUT_SUSPEND, &pval);
+		pdpm, PD_PL_PSY_IIO_BQ_INPUT_SUSPEND, &val);
 	if (!rc)
-		bq_input_suspend = !!pval;
+		bq_input_suspend = !!val;
 
 	rc = pd_pl_get_psy_iio_property(pdpm, PD_PL_PSY_IIO_TEMP,
-				       &pval);
+				       &val);
 	if (rc < 0) {
 		pr_info("Couldn't get batt temp prop:%d\n", rc);
 		return false;
 	}
 
-	batt_temp = pval;
+	batt_temp = val;
 	pr_debug("batt_temp: %d\n", batt_temp);
 	if (bq_input_suspend) {
 		return true;
@@ -310,19 +310,19 @@ static bool pd_disable_cp_by_jeita_status(struct usbpd_pm *pdpm)
 
 static bool is_cool_charge(struct usbpd_pm *pdpm)
 {
-	int batt_temp = 0, pval = 0;
+	int batt_temp = 0, val = 0;
 	int rc;
 
 	if (!is_pd_pl_ext_iio_available(pdpm))
 		return false;
 
 	rc = pd_pl_get_psy_iio_property(pdpm, PD_PL_PSY_IIO_TEMP,
-				       &pval);
+				       &val);
 	if (rc < 0) {
 		pr_info("Couldn't get batt temp prop:%d\n", rc);
 		return false;
 	}
-	batt_temp = pval;
+	batt_temp = val;
 
 	pr_debug("batt_temp: %d\n", batt_temp);
 	if (batt_temp < 150)
@@ -341,21 +341,21 @@ static bool pd_get_bms_digest_verified(struct usbpd_pm *pdpm)
 #if 0
 static bool pd_get_pps_charger_verified(struct usbpd_pm *pdpm)
 {
-	int rc, pval = 0;
+	int rc, val = 0;
 
 	if (!is_pd_pl_ext_iio_available(pdpm))
 		return false;
 
 	rc = pd_pl_get_psy_iio_property(pdpm,
-				PD_PL_PSY_IIO_PD_AUTHENTICATION, &pval);
+				PD_PL_PSY_IIO_PD_AUTHENTICATION, &val);
 	if (rc < 0) {
 		pr_info("Couldn't get pd_authentication result:%d\n", rc);
 		return false;
 	}
 
-	pr_err("pval: %d\n", pval);
+	pr_err("val: %d\n", val);
 
-	if (pval == 1)
+	if (val == 1)
 		return true;
 	else
 		return false;
@@ -554,14 +554,6 @@ static void usbpd_pm_update_cp_sec_status(struct usbpd_pm *pdpm)
 	if (!pm_config.cp_sec_enable)
 		return;
 
-	if (!pdpm->cp_sec_psy) {
-		pdpm->cp_sec_psy = power_supply_get_by_name("bq2597x-slave");
-		if (!pdpm->cp_sec_psy) {
-			pr_debug("cp_sec_psy not found\n");
-			return;
-		}
-	}
-
 	if (!is_pd_pl_ext_iio_available(pdpm))
 		return;
 
@@ -594,14 +586,6 @@ static int usbpd_pm_enable_cp_sec(struct usbpd_pm *pdpm, bool enable)
 {
 	int ret, val = 0;
 
-	if (!pdpm->cp_sec_psy) {
-		pdpm->cp_sec_psy = power_supply_get_by_name("bq2597x-slave");
-		if (!pdpm->cp_sec_psy) {
-			pr_debug("cp_sec_psy not found\n");
-			return -ENODEV;
-		}
-	}
-
 	if (!is_pd_pl_ext_iio_available(pdpm))
 		return -ENODEV;
 
@@ -632,14 +616,6 @@ static int usbpd_pm_check_cp_enabled(struct usbpd_pm *pdpm)
 static int usbpd_pm_check_cp_sec_enabled(struct usbpd_pm *pdpm)
 {
 	int ret, val = 0;
-
-	if (!pdpm->cp_sec_psy) {
-		pdpm->cp_sec_psy = power_supply_get_by_name("bq2597x-slave");
-		if (!pdpm->cp_sec_psy) {
-			pr_debug("cp_sec_psy not found\n");
-			return -ENODEV;
-		}
-	}
 
 	if (!is_pd_pl_ext_iio_available(pdpm))
 		return -ENODEV;
@@ -734,7 +710,7 @@ static void usbpd_pm_update_sw_status(struct usbpd_pm *pdpm)
 
 static void usbpd_pm_evaluate_src_caps(struct usbpd_pm *pdpm)
 {
-	int ret, i, pval = 0;
+	int ret, i, val = 0;
 
 	if (!pdpm->pd) {
 		pdpm->pd = smb_get_usbpd();
@@ -773,10 +749,10 @@ static void usbpd_pm_evaluate_src_caps(struct usbpd_pm *pdpm)
 			pdpm->apdo_max_curr);
 		if (pdpm->apdo_max_curr <= LOW_POWER_PPS_CURR_THR)
 			pdpm->apdo_max_curr = XIAOMI_LOW_POWER_PPS_CURR_MAX;
-		pval = (pdpm->apdo_max_volt / 1000) *
+		val = (pdpm->apdo_max_volt / 1000) *
 			      (pdpm->apdo_max_curr / 1000);
 		pd_pl_set_psy_iio_property(pdpm,
-					  PD_PL_PSY_IIO_APDO_MAX, pval);
+					  PD_PL_PSY_IIO_APDO_MAX, val);
 	} else {
 		pr_info("Not qualified PPS adapter\n");
 	}
@@ -1287,7 +1263,7 @@ static void usbpd_pm_workfunc(struct work_struct *work)
 
 static void usbpd_pm_disconnect(struct usbpd_pm *pdpm)
 {
-	int pval = 0;
+	int val = 0;
 
 	cancel_delayed_work_sync(&pdpm->pm_work);
 
@@ -1304,9 +1280,9 @@ static void usbpd_pm_disconnect(struct usbpd_pm *pdpm)
 		usbpd_pm_check_sw_enabled(pdpm);
 	}
 
-	pval = 0;
+	val = 0;
 	pd_pl_set_psy_iio_property(pdpm, PD_PL_PSY_IIO_APDO_MAX,
-				  pval);
+				  val);
 
 	usbpd_pm_enable_cp(pdpm, false);
 
@@ -1369,21 +1345,21 @@ static void usb_psy_change_work(struct work_struct *work)
 {
 	struct usbpd_pm *pdpm =
 		container_of(work, struct usbpd_pm, usb_psy_change_work);
-	int ret = 0, val1 = 0, pd_auth_val = 0;
+	int ret = 0, val = 0, pd_auth_val = 0;
 
 	ret = pd_pl_get_psy_iio_property(
-		pdpm, PD_PL_PSY_IIO_TYPEC_POWER_ROLE, &val1);
+		pdpm, PD_PL_PSY_IIO_TYPEC_POWER_ROLE, &val);
 	if (ret) {
 		pr_err("Failed to read typec power role\n");
 		goto out;
 	}
 
-	if (val1 != QTI_POWER_SUPPLY_TYPEC_PR_SINK &&
-	    val1 != QTI_POWER_SUPPLY_TYPEC_PR_DUAL)
+	if (val != QTI_POWER_SUPPLY_TYPEC_PR_SINK &&
+	    val != QTI_POWER_SUPPLY_TYPEC_PR_DUAL)
 		goto out;
 
 	ret = pd_pl_get_psy_iio_property(pdpm,
-					PD_PL_PSY_IIO_PD_ACTIVE, &val1);
+					PD_PL_PSY_IIO_PD_ACTIVE, &val);
 	if (ret) {
 		pr_err("Failed to get usb pd active state\n");
 		goto out;
@@ -1398,11 +1374,11 @@ static void usb_psy_change_work(struct work_struct *work)
 	}
 
 	if (!pdpm->pd_active && (pd_auth_val == 1) &&
-	    (val1 == QTI_POWER_SUPPLY_PD_PPS_ACTIVE))
+	    (val == QTI_POWER_SUPPLY_PD_PPS_ACTIVE))
 		usbpd_pd_contact(pdpm, true);
-	else if (!pdpm->pd_active && (val1 == QTI_POWER_SUPPLY_PD_PPS_ACTIVE))
+	else if (!pdpm->pd_active && (val == QTI_POWER_SUPPLY_PD_PPS_ACTIVE))
 		usbpd_pps_non_verified_contact(pdpm, true);
-	else if (pdpm->pd_active && !val1)
+	else if (pdpm->pd_active && !val)
 		usbpd_pd_contact(pdpm, false);
 out:
 	pdpm->psy_change_running = false;
@@ -1535,11 +1511,6 @@ static int usbpd_pm_probe(struct platform_device *pdev)
 	spin_lock_init(&pdpm->psy_change_lock);
 
 	usbpd_check_cp_psy(pdpm);
-	if (!pdpm->cp_sec_psy) {
-		pdpm->cp_sec_psy = power_supply_get_by_name("bq2597x-slave");
-		if (!pdpm->cp_sec_psy)
-			pr_debug("cp_sec_psy not found\n");
-	}
 	usbpd_check_usb_psy(pdpm);
 
 	INIT_WORK(&pdpm->cp_psy_change_work, cp_psy_change_work);

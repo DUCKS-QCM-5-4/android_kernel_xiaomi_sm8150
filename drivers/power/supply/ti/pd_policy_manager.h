@@ -159,8 +159,6 @@ struct cp_device {
 	int die_temp;
 };
 
-#define LEGACY_BMS 0
-#define PM_STATE_LOG_MAX 32 //why is this here?
 struct usbpd_pm {
 	struct device *dev;
 
@@ -199,7 +197,6 @@ struct usbpd_pm {
 
 	struct votable *fcc_votable;
 	struct power_supply *cp_psy;
-	struct power_supply *cp_sec_psy;
 	struct power_supply *sw_psy;
 	struct power_supply *usb_psy;
 
