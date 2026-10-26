@@ -42,7 +42,7 @@ int smb5_iio_get_prop(struct smb_charger *chg, int channel, int *val)
 		break;
 #ifdef CONFIG_MACH_XIAOMI_SM8150
 	case PSY_IIO_HVDCP3_TYPE:
-#if 1//DEBUG
+#if 1//normal code
 #if defined(CONFIG_MACH_XIAOMI_VAYU)//FIX
 		if (chg->real_charger_type != QTI_POWER_SUPPLY_TYPE_USB_HVDCP_3
 				&& chg->real_charger_type != QTI_POWER_SUPPLY_TYPE_USB_HVDCP_3P5) {
@@ -83,7 +83,7 @@ int smb5_iio_get_prop(struct smb_charger *chg, int channel, int *val)
 				*val = HVDCP3_NONE;
 		}
 #endif
-#else
+#else //DEBUG code
 #if defined(CONFIG_MACH_XIAOMI_VAYU) // FIX
 		pr_info("SMB5: V: HVDCP3_TYPE: real_charger_type=%d, qc3p5_power_limit=%dW, qc_class_ab=%d, class_a=%d, class_b=%d\n",
 			chg->real_charger_type,
@@ -806,7 +806,7 @@ int smb5_iio_set_prop(struct smb_charger *chg, int channel, int val)
 		}
 		break;
 	case PSY_IIO_BATTERY_CHARGING_LIMITED:
-#if 1 //DEBUG
+#if 1 //normal code
 		if (chg->use_bq_pump) {
 			if (val == 0) {
 				vote(chg->usb_icl_votable, MAIN_CHG_VOTER,
@@ -824,7 +824,7 @@ int smb5_iio_set_prop(struct smb_charger *chg, int channel, int val)
 			}
 			rerun_election(chg->usb_icl_votable);
 		}
-#else
+#else//DEBUG code
 	pr_info("BATTERY_CHARGING_LIMITED: val=%d, use_bq_pump=%d, real_charger_type=%d\n",
 		val, chg->use_bq_pump, chg->real_charger_type);
 	if (chg->use_bq_pump) {

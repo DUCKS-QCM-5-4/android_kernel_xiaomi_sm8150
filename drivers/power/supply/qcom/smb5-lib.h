@@ -19,6 +19,7 @@
 #include <linux/qti_power_supply.h>
 #include "storm-watch.h"
 #include "battery.h"
+/* include in smb5-lib.h for xiaomi */
 #ifdef CONFIG_MACH_XIAOMI_SM8150
 #include "smb5-iio.h"
 #endif
@@ -671,21 +672,6 @@ struct smb_charger {
 	struct power_supply		*usb_port_psy;
 	struct power_supply		*wls_psy;
 
-#ifdef CONFIG_MACH_XIAOMI_SM8150
-	/* TODO: DUCKY: REMOVE AFTER IIO*/
-	struct power_supply_desc		usb_psy_desc;
-	struct power_supply		*idtp_psy;
-	struct power_supply		*wip_psy;
-	struct power_supply		*wireless_psy;
-	struct power_supply		*wls_chip_psy;
-#if defined(CONFIG_MACH_XIAOMI_VAYU)
-	struct power_supply		*ln_psy;
-	struct power_supply		*halo_psy;
-	struct power_supply		*cp_chip_psy;
-#endif
-	enum power_supply_type		wireless_charger_type;
-#endif
-
 	/* notifiers */
 	struct notifier_block	nb;
 
@@ -1333,18 +1319,11 @@ int smblib_icl_override(struct smb_charger *chg, enum icl_override_mode mode);
 enum alarmtimer_restart smblib_lpd_recheck_timer(struct alarm *alarm,
 				ktime_t time);
 #ifdef CONFIG_MACH_XIAOMI_SM8150
-int smblib_set_prop_wireless_wakelock(struct smb_charger *chg,
-				const union power_supply_propval *val);
-
 int smblib_set_prop_type_recheck(struct smb_charger *chg,
 				 int val);
 int smblib_get_prop_type_recheck(struct smb_charger *chg,
 				 int *val);
 int smblib_get_quick_charge_type(struct smb_charger *chg);
-int smblib_set_wirless_cp_enable(struct smb_charger *chg,
-				const union power_supply_propval *val);
-int smblib_set_wirless_power_good_enable(struct smb_charger *chg,
-				const union power_supply_propval *val);
 #if defined(CONFIG_MACH_XIAOMI_VAYU)
 int smblib_set_fastcharge_mode(struct smb_charger *chg, bool enable);
 int smblib_get_fastcharge_mode(struct smb_charger *chg);

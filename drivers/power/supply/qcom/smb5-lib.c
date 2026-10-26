@@ -51,7 +51,6 @@ static bool off_charge_flag;
 #if defined(CONFIG_MACH_XIAOMI_VAYU)
 static bool first_boot_flag;
 #endif
-// bool smblib_rsbux_low(struct smb_charger *chg, int r_thr);
 static int smblib_get_prop_typec_mode(struct smb_charger *chg);
 #endif
 
@@ -771,41 +770,39 @@ static int smblib_set_dc_suspend(struct smb_charger *chg, bool suspend)
 #if defined(CONFIG_MACH_XIAOMI_VAYU)
 int smblib_get_fastcharge_mode(struct smb_charger *chg)
 {//FGGEN4 channel, PSY_IIO_FASTCHARGE_MODE
-	union power_supply_propval pval = {0,};
-	int rc = 0;
+	int rc = 0, val = 0;
 
 	rc = smblib_get_prop_from_bms(chg,
-		SMB5_QG_FASTCHARGE_MODE, &pval.intval);
+		SMB5_QG_FASTCHARGE_MODE, &val);
 	if (rc < 0) {
 		smblib_err(chg, "Couldn't read iio fastcharge mode:%d\n", rc);
 		return rc;
 	}
 
-	return pval.intval;
+	return val;
 }
 
 static int smb5_config_sys_iterm(struct smb_charger *chg, bool ffc_enable)
 {
-	union power_supply_propval pval = {0,};
-	int rc;
+	int rc = 0, val = 0;
 
-	pval.intval = ffc_enable;
+	val = ffc_enable;
 
 	rc = smblib_write_iio_prop(chg, QG,//FGGEN4 channel, PSY_IIO_SYS_TERMINATION_CURRENT
-			SMB5_QG_SYS_TERMINATION_CURRENT, pval.intval);
+			SMB5_QG_SYS_TERMINATION_CURRENT, val);
 	if (rc < 0) {
 		smblib_err(chg, "Couldn't set ffc termination current:%d\n", rc);
 		return rc;
 	}
 	rc = smblib_write_iio_prop(chg, QG,//FGGEN4 channel, PSY_IIO_VBATT_FULL_VOL
-			SMB5_QG_VBATT_FULL_VOL, pval.intval);
+			SMB5_QG_VBATT_FULL_VOL, val);
 	if (rc < 0) {
 		smblib_err(chg, "Couldn't set ffc vabtt full:%d\n", rc);
 		return rc;
 	}
 
 	rc = smblib_write_iio_prop(chg, QG,//FGGEN4 channel, PSY_IIO_KI_COEFF_CURRENT
-			SMB5_QG_KI_COEFF_CURRENT, pval.intval);
+			SMB5_QG_KI_COEFF_CURRENT, val);
 	if (rc < 0) {
 		smblib_err(chg, "Couldn't set ffc ki_coefet:%d\n", rc);
 		return rc;
@@ -874,8 +871,7 @@ int smb5_config_iterm(struct smb_charger *chg, int hi_thresh, int low_thresh)
 
 int smblib_set_fastcharge_mode(struct smb_charger *chg, bool enable)
 {
-	union power_supply_propval pval = {0,};
-	int rc = 0;
+	int rc = 0, val = 0;
 	int termi = -220, batt_temp;
 
 	if (IS_ERR_OR_NULL(chg->iio_chan_list_qg))
@@ -883,12 +879,12 @@ int smblib_set_fastcharge_mode(struct smb_charger *chg, bool enable)
 
 // #if defined(CONFIG_BATT_VERIFY_BY_DS28E16) || defined(CONFIG_BATT_VERIFY_BY_DS28E16_NABU)
 // 	rc = smblib_get_prop_from_bms(chg,
-// 					SMB5_QG_AUTHENTIC, &pval.intval);
+// 					SMB5_QG_AUTHENTIC, &val);
 // 	if (rc < 0) {
 // 		smblib_err(chg, "Couldn't get battery authentic:%d\n", rc);
 // 		return rc;
 // 	}
-// 	if (!pval.intval)
+// 	if (!val)
 // 		enable = false;
 // // #else //debug: fatal if bat is 95%+
 // // 	smblib_err(chg, "battery authentic disabled, enable fastcharge anyway:%d\n", rc);
@@ -897,33 +893,33 @@ int smblib_set_fastcharge_mode(struct smb_charger *chg, bool enable)
 
 	/*if soc > 95 do not set fastcharge flag*/
 	rc = smblib_get_prop_from_bms(chg,
-				SMB5_QG_CAPACITY, &pval.intval);
+				SMB5_QG_CAPACITY, &val);
 	if (rc < 0) {
 		smblib_err(chg, "Couldn't get bms capacity:%d\n", rc);
 		return rc;
 	}
-	if (enable && pval.intval >= 95) {
+	if (enable && val >= 95) {
 		smblib_dbg(chg, PR_MISC, "soc:%d is more than 95"
-				"do not setfastcharge mode\n", pval.intval);
+				"do not setfastcharge mode\n", val);
 		enable = false;
 	}
 	/*if temp > 450 or temp < 150 do not set fastcharge flag*/
 	rc = smblib_get_prop_from_bms(chg,
-					SMB5_QG_TEMP, &pval.intval);
+					SMB5_QG_TEMP, &val);
 	if (rc < 0) {
 		smblib_err(chg, "Couldn't get bms capacity:%d\n", rc);
 		goto set_term;
 	}
-	batt_temp = pval.intval;
-	if (enable && (pval.intval >= chg->ffc_high_tbat || pval.intval <= chg->ffc_low_tbat)) {
+	batt_temp = val;
+	if (enable && (val >= chg->ffc_high_tbat || val <= chg->ffc_low_tbat)) {
 		pr_info("tbat out of range, don't enable ffc\n");
 		enable = false;
 	}
-	/* NOTE: fastchargemode is set by QG_TEMP to 1 or 0*/
-	pval.intval = enable;
+
+	val = enable;
 	//FGGEN4 channel, PSY_IIO_FASTCHARGE_MODE
 	rc = smblib_write_iio_prop(chg, QG,
-				SMB5_QG_FASTCHARGE_MODE, pval.intval);
+				SMB5_QG_FASTCHARGE_MODE, val);
 	if (rc < 0) {
 		smblib_err(chg, "Couldn't write fastcharge mode:%d\n", rc);
 		goto set_term;
@@ -933,12 +929,12 @@ int smblib_set_fastcharge_mode(struct smb_charger *chg, bool enable)
 		/* ffc need clear non_fcc_vfloat_voter first */
 		vote(chg->fv_votable, NON_FFC_VFLOAT_VOTER, false, 0);
 		rc = smblib_get_prop_from_bms(chg,//FGGEN4 channel, PSY_IIO_FFC_TERMINATION_CURRENT
-				SMB5_QG_FFC_TERMINATION_CURRENT, &pval.intval);
+				SMB5_QG_FFC_TERMINATION_CURRENT, &val);
 		if (rc < 0) {
 			smblib_err(chg, "Couldn't iio ffc termination current:%d\n", rc);
 			goto set_term;
 		}
-		termi = pval.intval;
+		termi = val;
 
 	} else {
 		/* when disable fast charge mode, need set vfloat back to 4.4V */
@@ -4676,22 +4672,6 @@ int smblib_get_prop_dc_online(struct smb_charger *chg,
 
 	return rc;
 }
-
-#ifdef CONFIG_MACH_XIAOMI_SM8150
-int smblib_set_prop_wireless_wakelock(struct smb_charger *chg,
-				const union power_supply_propval *val)
-{//TODO: Update IIO
-	if (val->intval) {
-		vote(chg->awake_votable, DC_AWAKE_VOTER, true, 0);
-		//schedule_delayed_work(&chg->dc_input_current_work,
-		//				msecs_to_jiffies(100)); //need enable
-	} else {
-		vote(chg->awake_votable, DC_AWAKE_VOTER, false, 0);
-		//cancel_delayed_work_sync(&chg->dc_input_current_work);
-	}
-	return 0;
-}
-#endif
 
 int smblib_get_prop_dc_current_max(struct smb_charger *chg,
 				    union power_supply_propval *val)
@@ -9617,129 +9597,6 @@ irqreturn_t smb5_dcin_uv_irq_handler(int irq, void *data)
 }
 
 #ifdef CONFIG_MACH_XIAOMI_SM8150
-static int smblib_get_wireless_output_vol(struct smb_charger *chg)
-{
-
-	int rc,wireless_vout = 0;
-
-	rc = iio_read_channel_processed(chg->iio.vph_v_chan,
-			&wireless_vout);
-	if (rc < 0) {
-		smblib_err(chg, "Couldn't get vph vol rc = %d\n",
-				rc);
-		return -ENODATA;
-	}
-	wireless_vout *= 2;
-	wireless_vout /= 100000;
-	wireless_vout *= 100000;
-
-	return wireless_vout;
-
-}
-
-int smblib_set_wirless_cp_enable(struct smb_charger *chg,
-				const union power_supply_propval *val)
-{
-	union power_supply_propval pval;
-	int wireless_vout = 0;
-	int rc;
-
-	wireless_vout = smblib_get_wireless_output_vol(chg);
-	if (wireless_vout < 0) {
-		dev_err(chg->dev, "Couldn't get vph_pwr  wireless_vout=%d\n",
-					wireless_vout);
-		return -ENODATA;
-	}
-
-	if (chg->flag_dc_present && val->intval) {
-		pval.intval = wireless_vout;
-		rc = smblib_set_prop_voltage_wls_output(chg, &pval);
-		if (rc < 0)
-			dev_err(chg->dev, "Couldn't set dc voltage to 2*vph  rc=%d\n",
-						rc);
-
-		rc = smblib_select_sec_charger(chg, QTI_POWER_SUPPLY_CHARGER_SEC_CP,
-						QTI_POWER_SUPPLY_CP_WIRELESS, false);
-		if (rc < 0)
-			dev_err(chg->dev,
-					"Couldn't enable secondary chargers  rc=%d\n", rc);
-	} else
-		smblib_dbg(chg, PR_WLS, "dcin_not present or usbin_present\n");
-
-	return 0;
-}
-
-int smblib_set_wirless_power_good_enable(struct smb_charger *chg,
-				const union power_supply_propval *val)
-{
-	int rc = 0;
-
-	chg->power_good_en = val->intval;
-	if (chg->power_good_en) {
-		chg->fake_dc_on = 1;
-		chg->fake_dc_flag = 0;
-		chg->last_batt_stat = 0;
-		cancel_delayed_work(&chg->dc_plug_out_delay_work);
-		vote(chg->awake_votable, DC_UV_AWAKE_VOTER, false, 0);
-
-	}
-	else {
-		if (!chg->fake_dc_flag)
-			chg->fake_dc_on = 0;
-		/* step1: enter dc suspend */
-		rc = vote(chg->dc_suspend_votable, OTG_VOTER,
-			true, 0);
-
-		/* step2: force dcin_en low */
-		rc = smblib_masked_write(chg, DCIN_CMD_IL_REG,
-						 DCIN_EN_OVERRIDE_BIT | DCIN_EN_BIT,
-						 DCIN_EN_OVERRIDE_BIT);
-		if (rc < 0) {
-			dev_err(chg->dev, "Couldn't configure dc_en override rc=%d\n", rc);
-			return rc;
-		}
-
-		/* step3: enable pull-down on dcin_pon and mid_chg */
-		rc = smblib_masked_write(chg, DCIN_CMD_PULLDOWN_REG,
-						 DCIN_PULLDOWN_EN_BIT | DCIN_MID_PULLDOWN_BIT,
-						 DCIN_PULLDOWN_EN_BIT | DCIN_MID_PULLDOWN_BIT);
-		if (rc < 0) {
-			dev_err(chg->dev, "Couldn't enable dcin_pulldown rc=%d\n", rc);
-			return rc;
-		}
-		/* wait 10ms to pull mid_chg lower than Vsys+Vrevi */
-		msleep(10);
-
-		/* step4: disable pull-down on dcin_pon and mid_chg */
-		rc = smblib_masked_write(chg, DCIN_CMD_PULLDOWN_REG,
-						 DCIN_PULLDOWN_EN_BIT | DCIN_MID_PULLDOWN_BIT,
-						 0);
-		if (rc < 0) {
-			dev_err(chg->dev, "Couldn't disable dcin_pulldown rc=%d\n", rc);
-			return rc;
-		}
-
-		/* step5: remove dcin_en low */
-		rc = smblib_masked_write(chg, DCIN_CMD_IL_REG,
-						 DCIN_EN_OVERRIDE_BIT | DCIN_EN_BIT,
-						 0);
-		if (rc < 0) {
-			dev_err(chg->dev, "Couldn't configure dc_en override rc=%d\n", rc);
-			return rc;
-		}
-
-		/* step6: exit dc suspend */
-		rc = vote(chg->dc_suspend_votable, OTG_VOTER,
-			false, 0);
-	}
-	power_supply_changed(chg->dc_psy);
-	power_supply_changed(chg->batt_psy);
-	if (chg->wls_psy)
-		power_supply_changed(chg->wls_psy);
-
-	return 0;
-}
-
 static void smblib_dc_plug_out_work(struct work_struct *work)
 {
 	struct smb_charger *chg = container_of(work, struct smb_charger,
@@ -9758,9 +9615,7 @@ irqreturn_t smb5_dc_plugin_irq_handler(int irq, void *data)
 {
 	struct smb_irq_data *irq_data = data;
 	struct smb_charger *chg = irq_data->parent_data;
-#ifdef CONFIG_MACH_XIAOMI_SM8150
-	union power_supply_propval pval = {0, };
-#else
+#ifndef CONFIG_MACH_XIAOMI_SM8150
 	union power_supply_propval pval;
 #endif
 	int input_present;
@@ -9784,13 +9639,6 @@ irqreturn_t smb5_dc_plugin_irq_handler(int irq, void *data)
 	rc = smblib_is_input_present(chg, &input_present);
 	if (rc < 0)
 		return IRQ_HANDLED;
-
-#ifdef CONFIG_MACH_XIAOMI_SM8150
-	/* Todo remove this after IIO Update*/
-	chg->idtp_psy = power_supply_get_by_name("idt");
-	if (!chg->idtp_psy)
-		dev_err(chg->dev, "Could not get idtp psy\n");
-#endif
 
 	dcin_present = input_present & INPUT_PRESENT_DC;
 	vbus_present = input_present & INPUT_PRESENT_USB;
@@ -9894,11 +9742,6 @@ irqreturn_t smb5_dc_plugin_irq_handler(int irq, void *data)
 		if (!vbus_present && chg->sec_cp_present) {
 			chg->flag_dc_present = 1;
 			vote(chg->awake_votable, DC_AWAKE_VOTER, true, 0);
-			if (chg->idtp_psy) {
-				pval.intval = true;
-				power_supply_set_property(chg->idtp_psy,
-					POWER_SUPPLY_PROP_PRESENT, &pval);
-			}
 			/* when dc_in plug in, enable batt_temp irq wakeup */
 			if (chg->irq_info[BAT_TEMP_IRQ].irq && !chg->batt_temp_irq_enabled) {
 				enable_irq_wake(chg->irq_info[BAT_TEMP_IRQ].irq);
@@ -9930,12 +9773,6 @@ irqreturn_t smb5_dc_plugin_irq_handler(int irq, void *data)
 				"Couldn't disable secondary charger rc=%d\n",
 						rc);
 
-		if (chg->idtp_psy) {
-			pval.intval = false;
-			power_supply_set_property(chg->idtp_psy,
-						POWER_SUPPLY_PROP_PRESENT, &pval);
-		}
-
 		if (chg->cp_reason == QTI_POWER_SUPPLY_CP_WIRELESS) {
 			sec_charger = chg->sec_pl_present ?
 					QTI_POWER_SUPPLY_CHARGER_SEC_PL :
@@ -9956,11 +9793,6 @@ irqreturn_t smb5_dc_plugin_irq_handler(int irq, void *data)
 		if (!vbus_present && chg->sec_cp_present) {
 			chg->flag_dc_present = 1;
 			vote(chg->awake_votable, DC_AWAKE_VOTER, true, 0);
-			if (chg->idtp_psy) {
-				pval.intval = true;
-				power_supply_set_property(chg->idtp_psy,
-					POWER_SUPPLY_PROP_PRESENT, &pval);
-			}
 		}
 	} else {
 		vote(chg->awake_votable, DC_AWAKE_VOTER, false, 0);
@@ -9977,12 +9809,6 @@ irqreturn_t smb5_dc_plugin_irq_handler(int irq, void *data)
 			dev_err(chg->dev,
 				"Couldn't disable secondary charger rc=%d\n",
 						rc);
-
-		if (chg->idtp_psy) {
-			pval.intval = false;
-			power_supply_set_property(chg->idtp_psy,
-						POWER_SUPPLY_PROP_PRESENT, &pval);
-		}
 
 		if (chg->cp_reason == QTI_POWER_SUPPLY_CP_WIRELESS) {
 			sec_charger = chg->sec_pl_present ?

@@ -43,7 +43,9 @@ enum qg_chg_iio_channels {
 	SMB5_QG_KI_COEFF_CURRENT,
 	SMB5_QG_FFC_TERMINATION_CURRENT,
 	SMB5_QG_SHUTDOWN_DELAY_ENABLE,
+#if defined(CONFIG_BATT_VERIFY_BY_DS28E16)
 	SMB5_QG_AUTHENTIC,
+#endif
 #endif
 };
 
@@ -239,7 +241,7 @@ static const struct smb5_iio_prop_channels smb5_chans_pmic[] = {
 	SMB5_CHAN_ACTIVITY("battery_fcc_stepper_enable", FCC_STEPPER_ENABLE)
 	SMB5_CHAN_INDEX("usb_typec_accessory_mode", TYPEC_ACCESSORY_MODE)
 #ifdef CONFIG_MACH_XIAOMI_SM8150
-	SMB5_CHAN_ACTIVITY("pd_authen", PD_AUTHENTICATION)
+	SMB5_CHAN_ACTIVITY("pd_authentication", PD_AUTHENTICATION)
 	SMB5_CHAN_ACTIVITY("bq_fastcharge_mode", BQ_FASTCHARGE_MODE)
 	SMB5_CHAN_ACTIVITY("pd_remove_compensation", PD_REMOVE_COMPENSATION)
 	SMB5_CHAN_ACTIVITY("hvdcp3_type", HVDCP3_TYPE)
@@ -247,10 +249,10 @@ static const struct smb5_iio_prop_channels smb5_chans_pmic[] = {
 	SMB5_CHAN_INDEX("apdo_max", APDO_MAX)
 	SMB5_CHAN_ACTIVITY("liquid_detection", LIQUID_DETECTION)
 	SMB5_CHAN_ACTIVITY("dynamic_fv_enabled", DYNAMIC_FV_ENABLED)
-	SMB5_CHAN_ACTIVITY("bat_charging_enabled", BATTERY_CHARGING_ENABLED)
+	SMB5_CHAN_ACTIVITY("battery_charging_enabled", BATTERY_CHARGING_ENABLED)
 	SMB5_CHAN_INDEX("dc_thermal_levels", DC_THERMAL_LEVELS)
 	SMB5_CHAN_INDEX("dp_dm_bq", DP_DM_BQ)
-	SMB5_CHAN_ACTIVITY("bat_charging_limit", BATTERY_CHARGING_LIMITED)
+	SMB5_CHAN_ACTIVITY("battery_charging_limited", BATTERY_CHARGING_LIMITED)
 	SMB5_CHAN_ACTIVITY("slowly_charging", SLOWLY_CHARGING)
 	SMB5_CHAN_ACTIVITY("bq_input_suspend", BQ_INPUT_SUSPEND)
 #endif

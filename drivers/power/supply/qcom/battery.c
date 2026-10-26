@@ -1430,14 +1430,14 @@ static int usb_icl_vote_callback(struct votable *votable, void *data,
 
 #ifdef CONFIG_MACH_XIAOMI_SM8150
 	rc = chip->chg_param->iio_read(chip->dev,
-		PSY_IIO_SMB_EN_REASON, &pval.intval);
+		PSY_IIO_SMB_EN_REASON, &val);
 	if (rc < 0) {
 		pr_err("Couldn't get cp reason rc=%d\n", rc);
 		return rc;
 	}
 
 	if (chip->cp_ilim_votable) {
-		if (pval.intval != QTI_POWER_SUPPLY_CP_WIRELESS)
+		if (val != QTI_POWER_SUPPLY_CP_WIRELESS)
 			vote(chip->cp_ilim_votable, ICL_CHANGE_VOTER, true, icl_ua);
 		else
 			vote(chip->cp_ilim_votable, ICL_CHANGE_VOTER, false, 0);

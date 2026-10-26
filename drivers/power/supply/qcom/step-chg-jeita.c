@@ -838,17 +838,16 @@ update_time:
 #ifdef CONFIG_MACH_XIAOMI_SM8150
 static int handle_dynamic_fv(struct step_chg_info *chip)
 {
-	union power_supply_propval pval = {0, };
-	int rc = 0, fv_uv, cycle_count;
+	int rc = 0, fv_uv, cycle_count, val = 0;
 	u64 elapsed_us;
 	int batt_vol = 0;
 
 	rc = step_chg_read_iio_prop(chip, MAIN,
-		PSY_IIO_DYNAMIC_FV_ENABLED, &pval.intval); //IIO: QPNP_SMB5 channel
+		PSY_IIO_DYNAMIC_FV_ENABLED, &val); //IIO: QPNP_SMB5 channel
 	if (rc < 0)
 		chip->dynamic_fv_enable = 0;
 	else
-		chip->dynamic_fv_enable = pval.intval;
+		chip->dynamic_fv_enable = val;
 
 	if (!chip->dynamic_fv_enable || !chip->dynamic_fv_cfg_valid) {
 		/*need recovery some setting*/
@@ -863,7 +862,7 @@ static int handle_dynamic_fv(struct step_chg_info *chip)
 		return 0;
 
 	rc = step_chg_read_iio_prop(chip, QG,
-			STEP_QG_CYCLE_COUNT, &pval.intval);
+			STEP_QG_CYCLE_COUNT, &val);
 	if (rc < 0) {
 		pr_err("Couldn't read %s property rc=%d\n",
 				chip->dynamic_fv_config->prop_name, rc);
@@ -872,7 +871,7 @@ static int handle_dynamic_fv(struct step_chg_info *chip)
 		pr_debug("Success read %s property rc=%d\n",
 				chip->dynamic_fv_config->prop_name, rc);
 	}
-	cycle_count = pval.intval;
+	cycle_count = val;
 
 	rc = get_val(chip->dynamic_fv_config->fv_cfg,
 			0,
@@ -888,8 +887,8 @@ static int handle_dynamic_fv(struct step_chg_info *chip)
 	}
 
 	step_chg_read_iio_prop(chip, QG,
-		STEP_QG_VOLTAGE_NOW, &pval.intval);
-	batt_vol = pval.intval;
+		STEP_QG_VOLTAGE_NOW, &val);
+	batt_vol = val;
 	if (batt_vol >= fv_uv) {
 		goto update_time;
 	}
@@ -901,9 +900,9 @@ static int handle_dynamic_fv(struct step_chg_info *chip)
 	vote(chip->fv_votable, DYNAMIC_FV_VOTER, true, fv_uv);
 
 	/*set battery full voltage to FLOAT VOLTAGE - 10mV*/
-	pval.intval = fv_uv - 10000;
+	val = fv_uv - 10000;
 	rc = step_chg_write_iio_prop(chip, QG,
-		STEP_QG_CONSTANT_CHARGE_VOLTAGE, pval.intval);
+		STEP_QG_CONSTANT_CHARGE_VOLTAGE, val);
 	if (rc < 0) {
 		pr_err("Couldn't set CONSTANT VOLTAGE property rc=%d\n", rc);
 		return rc;
@@ -912,7 +911,7 @@ static int handle_dynamic_fv(struct step_chg_info *chip)
 	}
 
 	pr_debug("%s:cycle_count:%d,Batt_full:%d,fv:%d,\n",
-			__func__, cycle_count, pval.intval, fv_uv);
+			__func__, cycle_count, val, fv_uv);
 
 update_time:
 	chip->dynamic_fv_last_update_time = ktime_get();

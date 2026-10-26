@@ -6697,7 +6697,7 @@ static int fg_gen4_iio_read_raw(struct iio_dev *indio_dev,
 	case PSY_IIO_CHARGE_FULL_DESIGN:
 #ifdef CONFIG_MACH_XIAOMI_SM8150
 		if (-EINVAL != fg->bp.nom_cap_uah) {
-			*val2 = fg->bp.nom_cap_uah * 1000;
+			*val1 = fg->bp.nom_cap_uah * 1000;
 		} else {
 #endif
 		rc = fg_gen4_get_nominal_capacity(chip, &temp);
