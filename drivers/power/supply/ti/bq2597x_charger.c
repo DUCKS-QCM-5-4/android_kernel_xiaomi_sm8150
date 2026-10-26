@@ -1776,8 +1776,11 @@ static int bq2597x_charger_iio_read_raw(struct iio_dev *indio_dev,
 {
 	struct bq2597x *bq = iio_priv(indio_dev);
 	int result;
-	int ret;
+	int ret = 0;
 	u8 reg_val;
+
+	*val1 = 0;
+	*val2 = 0;
 
 	switch (chan->channel) {
 	case PSY_IIO_BQ_CHARGING_ENABLED:
@@ -1883,11 +1886,18 @@ static int bq2597x_charger_iio_read_raw(struct iio_dev *indio_dev,
 		*val1 = bq2597x_check_vbus_error_status(bq);
 		break;
 	default:
-		pr_err("unsupported property %d\n", chan->channel);
+		pr_err_ratelimited("BQ2597x read IIO channel %x not supported\n",
+			chan->channel);
 		return -EINVAL;
 	}
 
-	return 0;
+	if (ret < 0) {
+		pr_debug("Couldn't read channel %x ret = %d\n",
+				chan->channel, ret);
+		return -ENODATA;
+	}
+
+	return IIO_VAL_INT;
 }
 
 static int bq2597x_charger_iio_write_raw(struct iio_dev *indio_dev,
@@ -1907,7 +1917,8 @@ static int bq2597x_charger_iio_write_raw(struct iio_dev *indio_dev,
 		bq2597x_set_bus_protection(bq, val1);
 		break;
 	default:
-		pr_err("unsupported property %d\n", chan->channel);
+		pr_err_ratelimited("BQ2597x write IIO channel %x not supported\n",
+			chan->channel);
 		return -EINVAL;
 	}
 

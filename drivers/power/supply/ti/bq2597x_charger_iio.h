@@ -50,7 +50,7 @@ struct bq2597x_charger_iio_channels {
 		BIT(IIO_CHAN_INFO_PROCESSED))
 
 static const struct bq2597x_charger_iio_channels bq2597x_charger_iio_psy_channels[] = {
-	BQ2597X_CHARGER_CHAN_ACT("battery_preset", PSY_IIO_BQ_BATTERY_PRESENT)
+	BQ2597X_CHARGER_CHAN_ACT("battery_present", PSY_IIO_BQ_BATTERY_PRESENT)
 	BQ2597X_CHARGER_CHAN_ACT("vbus_present", PSY_IIO_BQ_VBUS_PRESENT)
 	BQ2597X_CHARGER_CHAN_VOLT("battery_voltage", PSY_IIO_BQ_BATTERY_VOLTAGE)
 	BQ2597X_CHARGER_CHAN_CUR("battery_current", PSY_IIO_BQ_BATTERY_CURRENT)
