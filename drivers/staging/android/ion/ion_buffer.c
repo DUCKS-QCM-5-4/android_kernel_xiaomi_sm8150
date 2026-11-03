@@ -10,6 +10,8 @@
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
 #include <linux/dma-noncoherent.h>
+#include <linux/file.h>
+#include <linux/msm_ion_ids.h>
 
 #define CREATE_TRACE_POINTS
 #include "ion_trace.h"
@@ -128,6 +130,82 @@ static int ion_sglist_zero(struct scatterlist *sgl, unsigned int nents,
 	return ret;
 }
 
+static unsigned int ion_translate_legacy_heap_mask(unsigned int old_mask)
+{
+	unsigned int new_mask = old_mask;
+
+	/*
+	 * Only remap bits that exixt in 4.19 but are unmapped in 5.4.
+	 * Do NOT remap these BITS, as they are valid 5.4 heaps:
+	 *   BIT(8)  = 5.4 ION_AUDIO_HEAP_ID
+	 *   BIT(9)  = 5.4 ION_CP_MM_HEAP_ID
+	 *   BIT(10) = 5.4 ION_SECURE_HEAP_ID
+	 *   BIT(11) = 5.4 ION_SECURE_DISPLAY_HEAP_ID
+	 */
+
+	/* 4.19 QSECOM TA: Bit 19 == 5.4 Bit 1 */
+	if (old_mask & BIT(19)) {
+		new_mask &= ~BIT(19);
+		new_mask |= ION_QSECOM_TA_HEAP_ID; /* BIT(1) */
+	}
+
+	/* 4.19 Camera: Bit 20 == 5.4 Bit 2 */
+	if (old_mask & BIT(20)) {
+		new_mask &= ~BIT(20);
+		new_mask |= ION_CAMERA_HEAP_ID; /* BIT(2) */
+	}
+
+	/* 4.19 ADSP: Bit 22 == 5.4 Bit 4 */
+	if (old_mask & BIT(22)) {
+		new_mask &= ~BIT(22);
+		new_mask |= ION_ADSP_HEAP_ID; /* BIT(4) */
+	}
+
+	/* 4.19 User Contig: Bit 26 == 5.4 Bit 6 */
+	if (old_mask & BIT(26)) {
+		new_mask &= ~BIT(26);
+		new_mask |= ION_USER_CONTIG_HEAP_ID; /* BIT(6) */
+	}
+
+	/* 4.19 QSECOM: Bit 27 == 5.4 Bit 7 */
+	if (old_mask & BIT(27)) {
+		new_mask &= ~BIT(27);
+		new_mask |= ION_QSECOM_HEAP_ID; /* BIT(7) */
+	}
+
+	/* 4.19 Audio: Bit 28 == 5.4 Bit 8 */
+	if (old_mask & BIT(28)) {
+		new_mask &= ~BIT(28);
+		new_mask |= ION_AUDIO_HEAP_ID; /* BIT(8) */
+	}
+
+	/* 4.19 SPSS: Bit 13 == 5.4 Bit 14 (Bit 13 is unused in 5.4) */
+	if (old_mask & BIT(13)) {
+		new_mask &= ~BIT(13);
+		new_mask |= ION_SPSS_HEAP_ID; /* BIT(14) */
+	}
+
+	if (new_mask != old_mask) {
+		struct file *exe_file = get_task_exe_file(current);
+		char path_buf[256];
+		char *path = "unknown";
+
+		if (exe_file) {
+			path = d_path(&exe_file->f_path, path_buf, sizeof(path_buf));
+			if (IS_ERR(path))
+				path = "unknown";
+		}
+
+		pr_info_ratelimited("ion: %s [%d] (%s): remapped legacy heap mask 0x%08x -> 0x%08x\n",
+				    current->comm, task_pid_nr(current), path,
+				    old_mask, new_mask);
+		if (exe_file)
+			fput(exe_file);
+	}
+
+	return new_mask;
+}
+
 struct ion_buffer *ion_buffer_alloc(struct ion_device *dev, size_t len,
 				    unsigned int heap_id_mask,
 				    unsigned int flags)
@@ -139,6 +217,8 @@ struct ion_buffer *ion_buffer_alloc(struct ion_device *dev, size_t len,
 	if (!dev || !len) {
 		return ERR_PTR(-EINVAL);
 	}
+
+	heap_id_mask = ion_translate_legacy_heap_mask(heap_id_mask);
 
 	if (heap_id_mask & ION_HEAP_SYSTEM) {
 		get_task_comm(task_comm, current->group_leader);
