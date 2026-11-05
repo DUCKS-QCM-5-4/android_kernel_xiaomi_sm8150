@@ -153,3 +153,12 @@ arch/arm/boot/dts/vendor
 #Ignoring Android.bp link file
 #
 Android.bp
+
+# custom
+*.sh
+*.log
+*.txt
+arch/arm64/configs/vendor/extras
+KernelSU/
+KernelSU-Next/
+drivers/kernelsu
