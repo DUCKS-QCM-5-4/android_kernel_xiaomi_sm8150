@@ -11,4 +11,17 @@ menuconfig ION
 	  If you're not using Android its probably safe to
 	  say N here.
 
+config ION_LEGACY_SUPPORT
+	bool "ION legacy userspace heap mask compatibility support"
+	depends on ION
+	default y if ARCH_SM8150 || ARCH_SDM845
+	help
+	  Enable compatibility translation for Android 9/10 (kernel 4.9/4.19)
+	  userspace vendor blobs that allocate ION memory using legacy heap masks
+	  (such as legacy CAMERA, AUDIO, ADSP, QSEECOM, and CP_MM heaps).
+	  This remaps legacy heap masks to the 5.4 compact heap layout.
+	  Defaults to Y for SM8150 and SDM845.
+	  If unsure, say Y if using vendor blobs built for 4.19/4.9 kernels.
+
 source "drivers/staging/android/ion/heaps/Kconfig"
+

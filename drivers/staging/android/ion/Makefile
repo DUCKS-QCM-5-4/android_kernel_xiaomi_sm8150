@@ -2,3 +2,6 @@
 obj-$(CONFIG_ION)	+= ion.o ion_buffer.o ion_dma_buf.o ion_heap.o
 CFLAGS_ion_buffer.o 	= -I$(src)
 obj-y			+= heaps/
+
+obj-$(CONFIG_ION_LEGACY_SUPPORT) += ion_legacy.o
+CFLAGS_ion_legacy.o 	= -I$(src)
