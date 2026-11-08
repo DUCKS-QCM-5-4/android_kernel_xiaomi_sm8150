@@ -2705,9 +2705,10 @@ static struct notifier_block notifier_trans_block = {
 	.notifier_call = cpufreq_notifier_trans
 };
 
-static int __maybe_unused register_walt_callback(void)
+static int register_walt_callback(void)
 {
-	return 0;
+	return cpufreq_register_notifier(&notifier_trans_block,
+					CPUFREQ_TRANSITION_NOTIFIER);
 }
 /*
  * cpufreq callbacks can be registered at core_initcall or later time.
