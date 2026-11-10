@@ -334,6 +334,10 @@ struct drm_bridge_funcs {
 	 */
 	void (*atomic_post_disable)(struct drm_bridge *bridge,
 				    struct drm_atomic_state *state);
+
+#ifdef CONFIG_MACH_XIAOMI_SM8150
+	int (*disp_get_panel_info)(struct drm_bridge *bridge, char *name);
+#endif
 };
 
 /**
