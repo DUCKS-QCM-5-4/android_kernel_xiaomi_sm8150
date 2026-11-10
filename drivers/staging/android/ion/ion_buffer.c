@@ -10,7 +10,6 @@
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
 #include <linux/dma-noncoherent.h>
-#include <linux/msm_ion.h>
 
 #define CREATE_TRACE_POINTS
 #include "ion_trace.h"
