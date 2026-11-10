@@ -1591,9 +1591,7 @@ static int stop_rx_sequencer(struct uart_port *uport)
 		 * This will help to handle incoming rx data in stop_rx_sequencer
 		 * for interrupt latency or system delay cases.
 		 */
-		unsigned int baud = port->cur_baud ? port->cur_baud : 115200;
-
-		stale_delay = (STALE_COUNT * SEC_TO_USEC) / baud;
+		stale_delay = (STALE_COUNT * SEC_TO_USEC) / port->cur_baud;
 		stale_delay = (2 * stale_delay) + SYSTEM_DELAY;
 		if (stale_delay > STALE_DELAY_MAX)
 			stale_delay = STALE_DELAY_MAX;
