@@ -271,6 +271,7 @@ struct dsi_panel {
 
 #if defined(CONFIG_MACH_XIAOMI_VAYU) || defined(CONFIG_MACH_XIAOMI_NABU)
 	int hbm_mode;
+	int cabc_mode;
 #endif
 
 	struct dsi_parser_utils utils;
@@ -407,6 +408,8 @@ int dsi_panel_post_unprepare(struct dsi_panel *panel);
 
 #if defined(CONFIG_MACH_XIAOMI_VAYU) || defined(CONFIG_MACH_XIAOMI_NABU)
 int dsi_panel_apply_hbm_mode(struct dsi_panel *panel);
+
+int dsi_panel_apply_cabc_mode(struct dsi_panel *panel);
 #endif
 
 int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl);
