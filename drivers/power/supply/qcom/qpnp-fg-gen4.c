@@ -4303,6 +4303,7 @@ static void status_change_work(struct work_struct *work)
 #else
 		fg->charge_status, fg->charge_done, input_present);
 #endif
+
 	batt_soc_cp = div64_u64((u64)(u32)batt_soc * CENTI_FULL_SOC,
 				BATT_SOC_32BIT);
 	cap_learning_update(chip->cl, batt_temp, batt_soc_cp,

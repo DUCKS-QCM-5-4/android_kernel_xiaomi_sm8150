@@ -1167,11 +1167,11 @@ static const char * const smblib_qg_ext_iio_chan[] = {
 };
 
 #ifdef CONFIG_MACH_XIAOMI_VAYU
-/* bq2597x channels */
-static const char * const smblib_bq_ext_iio_chan[] = {
+/* xiaomi ti drivers iio channels */
+static const char * const smblib_ti_ext_iio_chan[] = {
 //TODO: add channels if needed
-	[SMB5_BQ_BATTERY_VOLTAGE] = "battery_voltage",
-	[SMB5_BQ_CHARGING_ENABLED] = "charging_enabled",
+	[SMB5_TI_BATTERY_VOLTAGE] = "battery_voltage",
+	[SMB5_TI_CHARGING_ENABLED] = "charging_enabled",
 };
 #endif
 
@@ -1203,10 +1203,10 @@ static int smblib_read_iio_prop(struct smb_charger *chg,
 		iio_chan_list = chg->iio_chan_list_smb_parallel[iio_chan];
 		break;
 #ifdef CONFIG_MACH_XIAOMI_VAYU
-	case BQ:
-		if (IS_ERR_OR_NULL(chg->iio_chan_list_bq))
+	case TI:
+		if (IS_ERR_OR_NULL(chg->iio_chan_list_ti))
 			return -ENODEV;
-		iio_chan_list = chg->iio_chan_list_bq[iio_chan];
+		iio_chan_list = chg->iio_chan_list_ti[iio_chan];
 		break;
 #endif
 	default:
@@ -1245,10 +1245,10 @@ static int smblib_write_iio_prop(struct smb_charger *chg,
 		iio_chan_list = chg->iio_chan_list_smb_parallel[iio_chan];
 		break;
 #ifdef CONFIG_MACH_XIAOMI_VAYU
-	case BQ:
-		if (IS_ERR_OR_NULL(chg->iio_chan_list_bq))
+	case TI:
+		if (IS_ERR_OR_NULL(chg->iio_chan_list_ti))
 			return -ENODEV;
-		iio_chan_list = chg->iio_chan_list_bq[iio_chan];
+		iio_chan_list = chg->iio_chan_list_ti[iio_chan];
 		break;
 #endif
 	default:
@@ -1291,28 +1291,28 @@ static bool is_cp_available(struct smb_charger *chg)
 }
 
 #ifdef CONFIG_MACH_XIAOMI_VAYU
-static bool is_smb5_bq_available(struct smb_charger *chg)
-{//todo: remove this debug function use chg->iio_chan_list_bq
+static bool is_smb5_ti_available(struct smb_charger *chg)
+{//todo: remove this debug function use chg->iio_chan_list_ti
 	int rc;
 	struct iio_channel **iio_list;
 
-	if (IS_ERR(chg->iio_chan_list_bq))
+	if (IS_ERR(chg->iio_chan_list_ti))
 		return false;
 
-	if (!chg->iio_chan_list_bq) {
+	if (!chg->iio_chan_list_ti) {
 		iio_list = get_ext_channels(chg->dev,
-			smblib_bq_ext_iio_chan,
-			ARRAY_SIZE(smblib_bq_ext_iio_chan));
+			smblib_ti_ext_iio_chan,
+			ARRAY_SIZE(smblib_ti_ext_iio_chan));
 		if (IS_ERR(iio_list)) {
 			rc = PTR_ERR(iio_list);
 			if (rc != -EPROBE_DEFER) {
 				dev_err(chg->dev, "Failed to get channels, rc=%d\n",
 						rc);
-				chg->iio_chan_list_bq = ERR_PTR(-EINVAL);
+				chg->iio_chan_list_ti = ERR_PTR(-EINVAL);
 			}
 			return false;
 		}
-		chg->iio_chan_list_bq = iio_list;
+		chg->iio_chan_list_ti = iio_list;
 	}
 
 	return true;
@@ -2936,10 +2936,10 @@ int smblib_get_prop_batt_health(struct smb_charger *chg,
 		   stat);
 
 	if (stat & CHARGER_ERROR_STATUS_BAT_OV_BIT) {
-#if defined(CONFIG_MACH_XIAOMI_VAYU) //bq2597x IIO Channel: PSY_IIO_BQ_BATTERY_VOLTAGE
-		if (chg->use_bq_pump && is_smb5_bq_available(chg)) {//todo: remove this debug function use chg->iio_chan_list_bq
-				rc = smblib_read_iio_prop(chg, BQ,
-					SMB5_BQ_BATTERY_VOLTAGE, &pval.intval);
+#if defined(CONFIG_MACH_XIAOMI_VAYU) //ti IIO Channel
+		if (chg->use_bq_pump && is_smb5_ti_available(chg)) {//todo: remove this debug function use chg->iio_chan_list_ti
+				rc = smblib_read_iio_prop(chg, TI,
+					SMB5_TI_BATTERY_VOLTAGE, &pval.intval);
 				pval.intval = pval.intval * 1000;
 		} else
 #endif
@@ -4152,7 +4152,7 @@ int smblib_dp_dm(struct smb_charger *chg, int val)
 }
 
 #if defined(CONFIG_MACH_XIAOMI_VAYU)
-int smblib_dp_dm_bq(struct smb_charger *chg, int val)
+int smblib_ti_dp_dm(struct smb_charger *chg, int val)
 {
 	int rc = 0;
 
@@ -7489,13 +7489,13 @@ static int check_reduce_fcc_condition(struct smb_charger *chg)
 	int rc, ibat = 0;
 	int effective_fcc = 0;
 
-	if (!is_smb5_bq_available(chg)) {//todo: remove this debug function use chg->iio_chan_list_bq
-		pr_err("bq_iio channels not found\n");
+	if (!is_smb5_ti_available(chg)) {//todo: remove this debug function use chg->iio_chan_list_ti
+		pr_err("ti_iio channels not found\n");
 		return 0;
 	}
 
-	rc = smblib_read_iio_prop(chg, BQ,
-				SMB5_BQ_CHARGING_ENABLED, &val.intval);
+	rc = smblib_read_iio_prop(chg, TI,
+				SMB5_TI_CHARGING_ENABLED, &val.intval);
 	if (rc < 0) {
 		pr_err("Error in getting cp charge enable, rc=%d\n", rc);
 		return 0;
@@ -11524,9 +11524,9 @@ int smblib_init(struct smb_charger *chg)
 
 #ifdef CONFIG_MACH_XIAOMI_VAYU
 		iio_list = get_ext_channels(chg->dev,
-			smblib_bq_ext_iio_chan, ARRAY_SIZE(smblib_bq_ext_iio_chan));
+			smblib_ti_ext_iio_chan, ARRAY_SIZE(smblib_ti_ext_iio_chan));
 		if (!IS_ERR(iio_list))
-			chg->iio_chan_list_bq = iio_list;
+			chg->iio_chan_list_ti = iio_list;
 #endif
 
 		if (chg->sec_pl_present) {

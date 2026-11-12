@@ -109,7 +109,7 @@ struct step_chg_info {
 	struct iio_channel	*iio_chans;
 	struct iio_channel	**iio_chan_list_qg;
 #if defined(CONFIG_MACH_XIAOMI_VAYU)
-	struct iio_channel	**iio_chan_list_bq;
+	struct iio_channel	**iio_chan_list_ti;
 #endif
 };
 
@@ -150,8 +150,8 @@ static const char * const step_chg_ext_iio_chan[] = {
 };
 
 #if defined(CONFIG_MACH_XIAOMI_VAYU)
-static const char * const step_chg_ext_iio_chan_bq[] = {
-	[STEP_BQ_BATTERY_VOLTAGE] = "battery_voltage",//bq
+static const char * const step_chg_ext_iio_chan_ti[] = {
+	[STEP_TI_BATTERY_VOLTAGE] = "battery_voltage",//ti
 };
 #endif
 
@@ -182,27 +182,27 @@ static bool is_bms_available(struct step_chg_info *chip)
 }
 
 #if defined(CONFIG_MACH_XIAOMI_VAYU)
-static bool is_step_bq_available(struct step_chg_info *chip)
+static bool is_step_ti_available(struct step_chg_info *chip)
 {
 	int rc = 0;
 	struct iio_channel **iio_list;
 
-	if (IS_ERR(chip->iio_chan_list_bq))
+	if (IS_ERR(chip->iio_chan_list_ti))
 		return false;
 
-	if (!chip->iio_chan_list_bq) {
-		iio_list = get_ext_channels(chip->dev, step_chg_ext_iio_chan_bq,
-				ARRAY_SIZE(step_chg_ext_iio_chan_bq));
+	if (!chip->iio_chan_list_ti) {
+		iio_list = get_ext_channels(chip->dev, step_chg_ext_iio_chan_ti,
+				ARRAY_SIZE(step_chg_ext_iio_chan_ti));
 		if (IS_ERR(iio_list)) {
 			rc = PTR_ERR(iio_list);
 			if (rc != -EPROBE_DEFER) {
 				dev_err(chip->dev, "Failed to get channels, %d\n",
 						rc);
-				chip->iio_chan_list_bq = ERR_PTR(-EINVAL);
+				chip->iio_chan_list_ti = ERR_PTR(-EINVAL);
 			}
 			return false;
 		}
-		chip->iio_chan_list_bq = iio_list;
+		chip->iio_chan_list_ti = iio_list;
 	}
 
 	return true;
@@ -343,10 +343,10 @@ static int step_chg_read_iio_prop(struct step_chg_info *chip,
 		iio_chan_list = chip->iio_chan_list_qg[iio_chan];
 		break;
 #if defined(CONFIG_MACH_XIAOMI_VAYU)
-	case BQ://TODO: add and check BQ
-		if (IS_ERR_OR_NULL(chip->iio_chan_list_bq))
+	case TI:
+		if (IS_ERR_OR_NULL(chip->iio_chan_list_ti))
 			return -ENODEV;
-		iio_chan_list = chip->iio_chan_list_bq[iio_chan];
+		iio_chan_list = chip->iio_chan_list_ti[iio_chan];
 		break;
 #endif
 	default:
@@ -365,16 +365,16 @@ static int step_chg_write_iio_prop(struct step_chg_info *chip,
 	struct iio_channel *iio_chan_list;
 
 	switch (type) {
-	case QG://TOO move xiaomi-iio in QG
+	case QG:
 		if (IS_ERR_OR_NULL(chip->iio_chan_list_qg))
 			return -ENODEV;
 		iio_chan_list = chip->iio_chan_list_qg[iio_chan];
 		break;
 #if defined(CONFIG_MACH_XIAOMI_VAYU)
-	case BQ:
-		if (IS_ERR_OR_NULL(chip->iio_chan_list_bq))
+	case TI:
+		if (IS_ERR_OR_NULL(chip->iio_chan_list_ti))
 			return -ENODEV;
-		iio_chan_list = chip->iio_chan_list_bq[iio_chan];
+		iio_chan_list = chip->iio_chan_list_ti[iio_chan];
 		break;
 #endif
 	default:
@@ -763,10 +763,10 @@ static int handle_step_chg_config(struct step_chg_info *chip)
 	}
 
 #if defined(CONFIG_MACH_XIAOMI_VAYU)
-	if (chip->use_bq_pump) { //todo: IIO BQ,
-		if (is_step_bq_available(chip)) {
-			rc = step_chg_read_iio_prop(chip, BQ,
-				STEP_BQ_BATTERY_VOLTAGE, &pval.intval);
+	if (chip->use_bq_pump) { //IIO TI,
+		if (is_step_ti_available(chip)) {
+			rc = step_chg_read_iio_prop(chip, TI,
+				STEP_TI_BATTERY_VOLTAGE, &pval.intval);
 			pval.intval = pval.intval * 1000;
 		}
 	} else {
@@ -1050,7 +1050,7 @@ static int handle_jeita(struct step_chg_info *chip)
 	batt_soc = pval.intval;
 	pr_info("%s:batt_soc=%d\n", __func__, batt_soc);
 	rc = step_chg_read_iio_prop(chip, MAIN,
-			PSY_IIO_BQ_FASTCHARGE_MODE, &pval.intval); // IIO BQ-FG 4
+			PSY_IIO_TI_FASTCHARGE_MODE, &pval.intval); // IIO TI-MAIN
 	pr_err("%s:fastcharge_mode=%d\n", __func__, pval.intval);
 	if (rc < 0) {
 		pr_err("Couldn't read fastcharge mode fail rc=%d\n", rc);
@@ -1067,7 +1067,7 @@ static int handle_jeita(struct step_chg_info *chip)
 			}
 			if (set_term_curr_flag) {
 				rc = step_chg_read_iio_prop(chip, QG,
-					STEP_QG_FFC_TERMINATION_CURRENT, &pval.intval);// IIO BQ-FG 4
+					STEP_QG_FFC_TERMINATION_CURRENT, &pval.intval);// IIO FG4
 				if (rc < 0) {
 					pr_err("Couldn't read ffc_term_curr fail rc=%d\n", rc);
 					return rc;
@@ -1117,7 +1117,7 @@ static int handle_jeita(struct step_chg_info *chip)
 						&& !fast_mode_dis) {
 				pval.intval = false;
 				rc = step_chg_write_iio_prop(chip, MAIN,
-						PSY_IIO_BQ_FASTCHARGE_MODE, pval.intval);
+						PSY_IIO_TI_FASTCHARGE_MODE, pval.intval);
 				if (rc < 0) {
 					pr_err("Set fastcharge mode failed, rc=%d\n", rc);
 					return rc;
@@ -1128,7 +1128,7 @@ static int handle_jeita(struct step_chg_info *chip)
 							&& fast_mode_dis) {
 				pval.intval = true;
 				rc = step_chg_write_iio_prop(chip, MAIN,
-						PSY_IIO_BQ_FASTCHARGE_MODE, pval.intval);
+						PSY_IIO_TI_FASTCHARGE_MODE, pval.intval);
 				if (rc < 0) {
 					pr_err("Set fastcharge mode failed, rc=%d\n", rc);
 					return rc;
@@ -1379,7 +1379,7 @@ int qcom_step_chg_init(struct device *dev, bool step_chg_enable,
 	chip->iio_chans = iio_chans;
 	chip->iio_chan_list_qg = NULL;
 #if defined(CONFIG_MACH_XIAOMI_VAYU)
-	chip->iio_chan_list_bq = NULL;
+	chip->iio_chan_list_ti = NULL;
 #endif
 
 	chip->step_chg_config = devm_kzalloc(dev,

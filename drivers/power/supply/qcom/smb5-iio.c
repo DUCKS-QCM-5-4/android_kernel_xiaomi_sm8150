@@ -185,7 +185,7 @@ int smb5_iio_get_prop(struct smb_charger *chg, int channel, int *val)
 		*val = chg->pd_verifed;
 		break;
 #if defined(CONFIG_MACH_XIAOMI_VAYU)
-	case PSY_IIO_BQ_FASTCHARGE_MODE:
+	case PSY_IIO_TI_FASTCHARGE_MODE:
 		*val = smblib_get_fastcharge_mode(chg);
 		break;
 	case PSY_IIO_PD_REMOVE_COMPENSATION:
@@ -414,7 +414,7 @@ int smb5_iio_get_prop(struct smb_charger *chg, int channel, int *val)
 		*val = chg->pulse_cnt;
 		break;
 #if defined(CONFIG_MACH_XIAOMI_VAYU)
-	case PSY_IIO_DP_DM_BQ:
+	case PSY_IIO_TI_DP_DM:
 		*val = chg->pulse_cnt;
 		break;
 #endif
@@ -511,7 +511,7 @@ int smb5_iio_set_prop(struct smb_charger *chg, int channel, int val)
 #endif
 #endif
 #if defined(CONFIG_MACH_XIAOMI_VAYU)
-	case PSY_IIO_BQ_FASTCHARGE_MODE:
+	case PSY_IIO_TI_FASTCHARGE_MODE:
 		power_supply_changed(chg->usb_psy);
 		if (chg->support_ffc) {
 			rc = smblib_set_fastcharge_mode(chg, val);
@@ -756,9 +756,9 @@ int smb5_iio_set_prop(struct smb_charger *chg, int channel, int val)
 			rc = smblib_dp_dm(chg, val);
 		break;
 #if defined(CONFIG_MACH_XIAOMI_VAYU)
-	case PSY_IIO_DP_DM_BQ:
+	case PSY_IIO_TI_DP_DM:
 		if (chg->use_bq_pump)
-			rc = smblib_dp_dm_bq(chg, val);
+			rc = smblib_ti_dp_dm(chg, val);
 		break;
 #endif
 	case PSY_IIO_INPUT_CURRENT_LIMITED:

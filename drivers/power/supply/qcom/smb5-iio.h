@@ -14,7 +14,7 @@ enum iio_type {
 	MAIN,
 	QG,
 #if defined(CONFIG_MACH_XIAOMI_VAYU)
-	BQ,
+	TI,
 #endif
 	CP,
 	SMB_PARALLEL,
@@ -49,11 +49,11 @@ enum qg_chg_iio_channels {
 #endif
 };
 
-#ifdef CONFIG_MACH_XIAOMI_SM8150
-/* For bq2597x charger */
-enum smblib_bq_ext_iio_chan {
-	SMB5_BQ_BATTERY_VOLTAGE,
-	SMB5_BQ_CHARGING_ENABLED,
+#if defined(CONFIG_MACH_XIAOMI_VAYU)
+/* For xiaomi ti charger in qpnp-smb5.c and smb5-lib.c */
+enum ti_chg_iio_chan {
+	SMB5_TI_BATTERY_VOLTAGE,
+	SMB5_TI_CHARGING_ENABLED,
 };
 #endif
 
@@ -88,10 +88,10 @@ enum step_chg_iio_channels {
 #endif
 };
 
-#ifdef CONFIG_MACH_XIAOMI_SM8150
-/* For bq2597x in step-chg-jeita.c */
-enum step_chg_iio_channels_bq {
-	STEP_BQ_BATTERY_VOLTAGE = 0,
+#if defined(CONFIG_MACH_XIAOMI_VAYU)
+/* For xiaomi ti drivers in step-chg-jeita.c */
+enum step_chg_iio_channels_ti {
+	STEP_TI_BATTERY_VOLTAGE = 0,
 };
 #endif
 
@@ -242,7 +242,7 @@ static const struct smb5_iio_prop_channels smb5_chans_pmic[] = {
 	SMB5_CHAN_INDEX("usb_typec_accessory_mode", TYPEC_ACCESSORY_MODE)
 #ifdef CONFIG_MACH_XIAOMI_SM8150
 	SMB5_CHAN_ACTIVITY("pd_authentication", PD_AUTHENTICATION)
-	SMB5_CHAN_ACTIVITY("bq_fastcharge_mode", BQ_FASTCHARGE_MODE)
+	SMB5_CHAN_ACTIVITY("ti_fastcharge_mode", TI_FASTCHARGE_MODE)
 	SMB5_CHAN_ACTIVITY("pd_remove_compensation", PD_REMOVE_COMPENSATION)
 	SMB5_CHAN_ACTIVITY("hvdcp3_type", HVDCP3_TYPE)
 	SMB5_CHAN_ACTIVITY("type_recheck", TYPE_RECHECK)
@@ -251,7 +251,7 @@ static const struct smb5_iio_prop_channels smb5_chans_pmic[] = {
 	SMB5_CHAN_ACTIVITY("dynamic_fv_enabled", DYNAMIC_FV_ENABLED)
 	SMB5_CHAN_ACTIVITY("battery_charging_enabled", BATTERY_CHARGING_ENABLED)
 	SMB5_CHAN_INDEX("dc_thermal_levels", DC_THERMAL_LEVELS)
-	SMB5_CHAN_INDEX("dp_dm_bq", DP_DM_BQ)
+	SMB5_CHAN_INDEX("ti_dp_dm", TI_DP_DM)
 	SMB5_CHAN_ACTIVITY("battery_charging_limited", BATTERY_CHARGING_LIMITED)
 	SMB5_CHAN_ACTIVITY("slowly_charging", SLOWLY_CHARGING)
 	SMB5_CHAN_ACTIVITY("bq_input_suspend", BQ_INPUT_SUSPEND)

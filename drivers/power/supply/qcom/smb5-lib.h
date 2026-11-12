@@ -637,7 +637,9 @@ struct smb_charger {
 	struct iio_channel	**iio_chan_list_qg;
 	struct iio_channel	**iio_chan_list_cp;
 	struct iio_channel	**iio_chan_list_smb_parallel;
-	struct iio_channel	**iio_chan_list_bq;
+#if defined(CONFIG_MACH_XIAOMI_VAYU)
+	struct iio_channel	**iio_chan_list_ti;
+#endif
 	int			*debug_mask;
 	int			pd_disabled;
 	enum smb_mode		mode;
@@ -1290,7 +1292,7 @@ int smblib_get_prop_fcc_delta(struct smb_charger *chg,
 int smblib_get_thermal_threshold(struct smb_charger *chg, u16 addr, int *val);
 int smblib_dp_dm(struct smb_charger *chg, int val);
 #if defined(CONFIG_MACH_XIAOMI_VAYU)
-int smblib_dp_dm_bq(struct smb_charger *chg, int val);
+int smblib_ti_dp_dm(struct smb_charger *chg, int val);
 #endif
 int smblib_disable_hw_jeita(struct smb_charger *chg, bool disable);
 int smblib_run_aicl(struct smb_charger *chg, int type);
