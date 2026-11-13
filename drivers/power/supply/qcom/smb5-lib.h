@@ -143,6 +143,12 @@ enum print_reason {
 #define MAIN_CHG_VOTER			"MAIN_CHG_VOTER"
 #define HVDCP3_START_ICL_VOTER	"HVDCP3_START_ICL_VOTER"
 #define MAIN_CHG_SUSPEND_VOTER			"MAIN_CHG_SUSPEND_VOTER"
+
+#ifdef CONFIG_CHARGER_LN8000
+/* use for Ln8000 */
+#define BATT_LN8000_VOTER		"BATT_LN8000_VOTER"
+#endif
+
 #define WLS_FCC_VOTER			"WLS_FCC_VOTER"
 #endif
 #endif
@@ -673,6 +679,9 @@ struct smb_charger {
 	struct power_supply		*dc_psy;
 	struct power_supply		*usb_port_psy;
 	struct power_supply		*wls_psy;
+#if defined(CONFIG_MACH_XIAOMI_VAYU) && defined(CONFIG_CHARGER_LN8000)
+	struct power_supply		*cp_psy;
+#endif
 
 	/* notifiers */
 	struct notifier_block	nb;
