@@ -1079,105 +1079,137 @@ static enum power_supply_property ln8000_charger_props[] = {
 /* --------------- MAIN PSY end ---------------- */
 
 /* --------------- MAIN IIO Start ---------------- */
+static int ln8000_charger_iio_get_prop(struct ln8000_info *info,
+					int channel, int *val)
+{
+	*val = 0;
+
+	switch (channel) {
+	case PSY_IIO_TI_CHARGING_ENABLED:
+		*val = psy_chg_get_charging_enabled(info);
+		break;
+	case PSY_IIO_TI_BATTERY_PRESENT:
+		ln8000_get_adc_data(info, LN8000_ADC_CH_VBAT, &info->vbat_uV);
+		if (info->vbat_uV > LN8000_ADC_VBAT_MIN) {
+			*val = 1; /* detected battery */
+		} else {
+			*val = 0; /* non-detected battery */
+		}
+		break;
+	case PSY_IIO_TI_VBUS_PRESENT:
+		ln8000_check_status(info);
+		*val = !(info->vac_unplug);
+		break;
+	case PSY_IIO_TI_BATTERY_VOLTAGE:
+		ln8000_get_adc_data(info, LN8000_ADC_CH_VBAT, &info->vbat_uV);
+		*val = info->vbat_uV / 1000;
+		break;
+	case PSY_IIO_TI_BATTERY_CURRENT: /* ln8000 not support IBAT_ADC */
+		ln8000_get_adc_data(info, LN8000_ADC_CH_IIN, &info->iin_uA);
+		*val =
+			(info->iin_uA * 2) / 1000; /* return to IBUS_ADC x 2 */
+		break;
+	case PSY_IIO_TI_BATTERY_TEMPERATURE:
+		if (info->pdata->tbat_mon_disable) {
+			*val = 0;
+		} else {
+			ln8000_get_adc_data(info, LN8000_ADC_CH_TSBAT,
+					    &info->tbat_uV);
+			*val = info->tbat_uV;
+			ln_info("ti_battery_temperature: adc_tbat=%d\n",
+				*val);
+		}
+		break;
+	case PSY_IIO_TI_BUS_VOLTAGE:
+		ln8000_get_adc_data(info, LN8000_ADC_CH_VIN, &info->vbus_uV);
+		*val = info->vbus_uV / 1000;
+		break;
+	case PSY_IIO_TI_BUS_CURRENT:
+		ln8000_get_adc_data(info, LN8000_ADC_CH_IIN, &info->iin_uA);
+		*val = info->iin_uA / 1000;
+		break;
+	case PSY_IIO_TI_BUS_TEMPERATURE:
+		if (info->pdata->tbus_mon_disable) {
+			*val = 0;
+		} else {
+			ln8000_get_adc_data(info, LN8000_ADC_CH_TSBUS,
+					    &info->tbus_uV);
+			*val = info->tbus_uV;
+			ln_info("ti_bus_temperature: adc_tbus=%d\n",
+				*val);
+		}
+		break;
+	case PSY_IIO_TI_DIE_TEMPERATURE:
+		ln8000_get_adc_data(info, LN8000_ADC_CH_DIETEMP,
+				    &info->tdie_dC);
+		*val = info->tdie_dC;
+		ln_info("ti_die_temperature: adc_tdie=%d\n", *val);
+		break;
+	case PSY_IIO_TI_ALARM_STATUS:
+		*val = psy_chg_get_ti_alarm_status(info);
+		break;
+	case PSY_IIO_TI_FAULT_STATUS:
+		*val = psy_chg_get_ti_fault_status(info);
+		break;
+	case PSY_IIO_TI_REG_STATUS:
+		ln8000_check_status(info);
+		*val =
+			((info->vbat_regulated << VBAT_REG_STATUS_SHIFT) |
+			 /* ln8000 not support ibat_reg, we are can be ibus_reg */
+			 (info->iin_regulated << IBAT_REG_STATUS_SHIFT));
+		if (*val) {
+			ln_info("ti_reg_status: intavl=0x%x\n", *val);
+		}
+		break;
+	case PSY_IIO_TI_SET_BUS_PROTECTION_FOR_QC3:
+		*val = 0;
+		break;
+	case PSY_IIO_TI_BUS_ERROR_STATUS:
+		*val = 0;
+		break;
+	default:
+		pr_err_ratelimited("ln8000 read IIO channel %x not supported\n",
+			channel);
+		return -EINVAL;
+	}
+
+	return IIO_VAL_INT;
+}
+
+static int ln8000_charger_iio_set_prop(struct ln8000_info *info,
+					int channel, int val)
+{
+	int ret = 0;
+
+	switch (channel) {
+	case PSY_IIO_TI_CHARGING_ENABLED:
+		ret = psy_chg_set_charging_enable(info, val);
+		break;
+	case PSY_IIO_TI_SET_BUS_PROTECTION_FOR_QC3:
+		ret = psy_chg_set_bus_protection_for_qc3(info, val);
+		break;
+	default:
+		pr_err_ratelimited("ln8000 write IIO channel %x not supported\n",
+			channel);
+		ret = -EINVAL;
+		break;
+	}
+
+	if (ret < 0) {
+		pr_err("Couldn't set prop %d rc = %d\n", channel, ret);
+		return ret;
+	}
+
+	return 0;
+}
+
 static int ln8000_charger_iio_read_raw(struct iio_dev *indio_dev,
 					struct iio_chan_spec const *chan, int *val1,
 					int *val2, long mask)
 {
 	struct ln8000_info *info = iio_priv(indio_dev);
 
-	*val1 = 0;
-	*val2 = 0;
-
-	switch (chan->channel) {
-	case PSY_IIO_TI_CHARGING_ENABLED:
-		*val1 = psy_chg_get_charging_enabled(info);
-		break;
-	case PSY_IIO_TI_BATTERY_PRESENT:
-		ln8000_get_adc_data(info, LN8000_ADC_CH_VBAT, &info->vbat_uV);
-		if (info->vbat_uV > LN8000_ADC_VBAT_MIN) {
-			*val1 = 1; /* detected battery */
-		} else {
-			*val1 = 0; /* non-detected battery */
-		}
-		break;
-	case PSY_IIO_TI_VBUS_PRESENT:
-		ln8000_check_status(info);
-		*val1 = !(info->vac_unplug);
-		break;
-	case PSY_IIO_TI_BATTERY_VOLTAGE:
-		ln8000_get_adc_data(info, LN8000_ADC_CH_VBAT, &info->vbat_uV);
-		*val1 = info->vbat_uV / 1000;
-		break;
-	case PSY_IIO_TI_BATTERY_CURRENT: /* ln8000 not support IBAT_ADC */
-		ln8000_get_adc_data(info, LN8000_ADC_CH_IIN, &info->iin_uA);
-		*val1 =
-			(info->iin_uA * 2) / 1000; /* return to IBUS_ADC x 2 */
-		break;
-	case PSY_IIO_TI_BATTERY_TEMPERATURE:
-		if (info->pdata->tbat_mon_disable) {
-			*val1 = 0;
-		} else {
-			ln8000_get_adc_data(info, LN8000_ADC_CH_TSBAT,
-					    &info->tbat_uV);
-			*val1 = info->tbat_uV;
-			ln_info("ti_battery_temperature: adc_tbat=%d\n",
-				*val1);
-		}
-		break;
-	case PSY_IIO_TI_BUS_VOLTAGE:
-		ln8000_get_adc_data(info, LN8000_ADC_CH_VIN, &info->vbus_uV);
-		*val1 = info->vbus_uV / 1000;
-		break;
-	case PSY_IIO_TI_BUS_CURRENT:
-		ln8000_get_adc_data(info, LN8000_ADC_CH_IIN, &info->iin_uA);
-		*val1 = info->iin_uA / 1000;
-		break;
-	case PSY_IIO_TI_BUS_TEMPERATURE:
-		if (info->pdata->tbus_mon_disable) {
-			*val1 = 0;
-		} else {
-			ln8000_get_adc_data(info, LN8000_ADC_CH_TSBUS,
-					    &info->tbus_uV);
-			*val1 = info->tbus_uV;
-			ln_info("ti_bus_temperature: adc_tbus=%d\n",
-				*val1);
-		}
-		break;
-	case PSY_IIO_TI_DIE_TEMPERATURE:
-		ln8000_get_adc_data(info, LN8000_ADC_CH_DIETEMP,
-				    &info->tdie_dC);
-		*val1 = info->tdie_dC;
-		ln_info("ti_die_temperature: adc_tdie=%d\n", *val1);
-		break;
-	case PSY_IIO_TI_ALARM_STATUS:
-		*val1 = psy_chg_get_ti_alarm_status(info);
-		break;
-	case PSY_IIO_TI_FAULT_STATUS:
-		*val1 = psy_chg_get_ti_fault_status(info);
-		break;
-	case PSY_IIO_TI_REG_STATUS:
-		ln8000_check_status(info);
-		*val1 =
-			((info->vbat_regulated << VBAT_REG_STATUS_SHIFT) |
-			 /* ln8000 not support ibat_reg, we are can be ibus_reg */
-			 (info->iin_regulated << IBAT_REG_STATUS_SHIFT));
-		if (*val1) {
-			ln_info("ti_reg_status: intavl=0x%x\n", *val1);
-		}
-		break;
-	case PSY_IIO_TI_SET_BUS_PROTECTION_FOR_QC3:
-		*val1 = 0;
-		break;
-	case PSY_IIO_TI_BUS_ERROR_STATUS:
-		*val1 = 0;
-		break;
-	default:
-		pr_err_ratelimited("ln8000 read IIO channel %x not supported\n",
-			chan->channel);
-		return -EINVAL;
-	}
-
-	return IIO_VAL_INT;
+	return ln8000_charger_iio_get_prop(info, chan->channel, val1);
 }
 
 static int ln8000_charger_iio_write_raw(struct iio_dev *indio_dev,
@@ -1185,28 +1217,8 @@ static int ln8000_charger_iio_write_raw(struct iio_dev *indio_dev,
 				int val2, long mask)
 {
 	struct ln8000_info *info = iio_priv(indio_dev);
-	int ret = 0;
 
-	switch (chan->channel) {
-	case PSY_IIO_TI_CHARGING_ENABLED:
-		ret = psy_chg_set_charging_enable(info, val1);
-		break;
-	case PSY_IIO_TI_SET_BUS_PROTECTION_FOR_QC3:
-		ret = psy_chg_set_bus_protection_for_qc3(info, val1);
-		break;
-	default:
-		pr_err_ratelimited("ln8000 write IIO channel %x not supported\n",
-			chan->channel);
-		ret = -EINVAL;
-		break;
-	}
-
-	if (ret < 0) {
-		pr_err("Couldn't set prop %d rc = %d\n", chan->channel, ret);
-		return ret;
-	}
-
-	return 0;
+	return ln8000_charger_iio_set_prop(info, chan->channel, val1);
 }
 
 static int ln8000_charger_of_xlate(struct iio_dev *indio_dev,
@@ -1229,6 +1241,22 @@ static const struct iio_info ln8000_iio_info = {
 	.write_raw	= ln8000_charger_iio_write_raw,
 	.of_xlate	= ln8000_charger_of_xlate,
 };
+
+static int ln8000_charger_direct_iio_read(struct device *dev,
+					int iio_chan, int *val)
+{
+	struct ln8000_info *info = dev_get_drvdata(dev);
+
+	return ln8000_charger_iio_get_prop(info, iio_chan, val);
+}
+
+static int ln8000_charger_direct_iio_write(struct device *dev,
+				int iio_chan, int val)
+{
+	struct ln8000_info *info = dev_get_drvdata(dev);
+
+	return ln8000_charger_iio_set_prop(info, iio_chan, val);
+}
 
 static int ln8000_charger_init_iio(struct ln8000_info *info)
 {
@@ -1830,6 +1858,12 @@ static int ln8000_probe(struct i2c_client *client,
 	}
 #endif
 
+	info->ln_main.dev = info->dev;
+	info->ln_main.indio_dev = info->indio_dev;
+	info->ln_main.ti_iio_read = ln8000_charger_direct_iio_read;
+	info->ln_main.ti_iio_write = ln8000_charger_direct_iio_write;
+	ti_proxy_iio_register(&info->ln_main);
+
 	determine_initial_status(info);
 
 	return 0;
@@ -1858,6 +1892,8 @@ static int ln8000_remove(struct i2c_client *client)
 	struct ln8000_info *info = i2c_get_clientdata(client);
 
 	ln8000_change_opmode(info, LN8000_OPMODE_STANDBY);
+
+	ti_proxy_iio_unregister(&info->ln_main);
 
 #ifdef CONFIG_DEBUG_FS
 	debugfs_remove_recursive(info->debug_root);

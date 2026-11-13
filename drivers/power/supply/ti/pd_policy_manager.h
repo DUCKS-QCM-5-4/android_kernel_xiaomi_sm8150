@@ -212,8 +212,6 @@ struct usbpd_pm {
 	bool jeita_triggered;
 	bool is_temp_out_fc2_range;
 
-	/* TI IIO channels */
-	struct iio_channel	**iio_chan_list_usbpd_ti;
 	/* Main IIO channels */
 	struct iio_channel	**iio_chan_list_usbpd_main;
 	/* QG IIO channels */

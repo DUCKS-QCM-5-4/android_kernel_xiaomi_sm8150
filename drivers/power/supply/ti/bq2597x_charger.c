@@ -1772,89 +1772,86 @@ static int show_registers(struct seq_file *m, void *data)
 }
 #endif
 
-static int bq2597x_charger_iio_read_raw(struct iio_dev *indio_dev,
-					struct iio_chan_spec const *chan, int *val1,
-					int *val2, long mask)
+static int bq2597x_charger_iio_get_prop(struct bq2597x *bq,
+					int channel, int *val)
 {
-	struct bq2597x *bq = iio_priv(indio_dev);
 	int result;
 	int ret = 0;
 	u8 reg_val;
 
-	*val1 = 0;
-	*val2 = 0;
+	*val = 0;
 
-	switch (chan->channel) {
+	switch (channel) {
 	case PSY_IIO_TI_CHARGING_ENABLED:
 		bq2597x_check_charge_enabled(bq, &bq->charge_enabled);
-		*val1 = bq->charge_enabled;
+		*val = bq->charge_enabled;
 		break;
 	case  PSY_IIO_TI_BATTERY_PRESENT:
 		ret = bq2597x_read_byte(bq, BQ2597X_REG_0D, &reg_val);
 		if (!ret)
 			bq->batt_present = !!(reg_val & VBAT_INSERT);
-		*val1 = bq->batt_present;
+		*val = bq->batt_present;
 		break;
 	case PSY_IIO_TI_VBUS_PRESENT:
 		ret = bq2597x_read_byte(bq, BQ2597X_REG_0D, &reg_val);
 		if (!ret)
 			bq->vbus_present = !!(reg_val & VBUS_INSERT);
-		*val1 = bq->vbus_present;
+		*val = bq->vbus_present;
 		break;
 	case PSY_IIO_TI_BATTERY_VOLTAGE:
 		ret = bq2597x_get_adc_data(bq, ADC_VBAT, &result);
 		if (!ret)
 			bq->vbat_volt = result;
 
-		*val1 = bq->vbat_volt;
+		*val = bq->vbat_volt;
 		break;
 	case PSY_IIO_TI_BATTERY_CURRENT:
 		ret = bq2597x_get_adc_data(bq, ADC_IBAT, &result);
 		if (!ret)
 			bq->ibat_curr = result;
 
-		*val1 = bq->ibat_curr;
+		*val = bq->ibat_curr;
 		break;
 	case PSY_IIO_TI_BATTERY_TEMPERATURE:
 		ret = bq2597x_get_adc_data(bq, ADC_TBAT, &result);
 		if (!ret)
 			bq->bat_temp = result;
 
-		*val1 = bq->bat_temp;
+		*val = bq->bat_temp;
 		break;
 	case PSY_IIO_TI_BUS_VOLTAGE:
 		ret = bq2597x_get_adc_data(bq, ADC_VBUS, &result);
 		if (!ret)
 			bq->vbus_volt = result;
 
-		*val1 = bq->vbus_volt;
+		*val = bq->vbus_volt;
 		break;
 	case PSY_IIO_TI_BUS_CURRENT:
 		ret = bq2597x_get_adc_data(bq, ADC_IBUS, &result);
 		if (!ret)
 			bq->ibus_curr = result;
 
-		*val1 = bq->ibus_curr;
+		*val = bq->ibus_curr;
 		break;
 	case PSY_IIO_TI_BUS_TEMPERATURE:
 		ret = bq2597x_get_adc_data(bq, ADC_TBUS, &result);
 		if (!ret)
 			bq->bus_temp = result;
 
-		*val1 = bq->bus_temp;
+		*val = bq->bus_temp;
 		break;
 	case PSY_IIO_TI_DIE_TEMPERATURE:
 		ret = bq2597x_get_adc_data(bq, ADC_TDIE, &result);
 		if (!ret)
 			bq->die_temp = result;
 
-		*val1 = bq->die_temp;
+		*val = bq->die_temp;
 		break;
 	case PSY_IIO_TI_ALARM_STATUS:
 
 		bq2597x_check_alarm_status(bq);
 
-		*val1 = ((bq->bat_ovp_alarm << BAT_OVP_ALARM_SHIFT) |
+		*val = ((bq->bat_ovp_alarm << BAT_OVP_ALARM_SHIFT) |
 			       (bq->bat_ocp_alarm << BAT_OCP_ALARM_SHIFT) |
 			       (bq->bat_ucp_alarm << BAT_UCP_ALARM_SHIFT) |
 			       (bq->bus_ovp_alarm << BUS_OVP_ALARM_SHIFT) |
@@ -1867,7 +1864,7 @@ static int bq2597x_charger_iio_read_raw(struct iio_dev *indio_dev,
 	case PSY_IIO_TI_FAULT_STATUS:
 		bq2597x_check_fault_status(bq);
 
-		*val1 = ((bq->bat_ovp_fault << BAT_OVP_FAULT_SHIFT) |
+		*val = ((bq->bat_ovp_fault << BAT_OVP_FAULT_SHIFT) |
 			       (bq->bat_ocp_fault << BAT_OCP_FAULT_SHIFT) |
 			       (bq->bus_ovp_fault << BUS_OVP_FAULT_SHIFT) |
 			       (bq->bus_ocp_fault << BUS_OCP_FAULT_SHIFT) |
@@ -1878,28 +1875,59 @@ static int bq2597x_charger_iio_read_raw(struct iio_dev *indio_dev,
 
 	case PSY_IIO_TI_REG_STATUS:
 		bq2597x_check_reg_status(bq);
-		*val1 = (bq->vbat_reg << VBAT_REG_STATUS_SHIFT) |
+		*val = (bq->vbat_reg << VBAT_REG_STATUS_SHIFT) |
 			      (bq->ibat_reg << IBAT_REG_STATUS_SHIFT);
 		break;
 	case PSY_IIO_TI_SET_BUS_PROTECTION_FOR_QC3:
-		*val1 = 0;
+		*val = 0;
 		break;
 	case PSY_IIO_TI_BUS_ERROR_STATUS:
-		*val1 = bq2597x_check_vbus_error_status(bq);
+		*val = bq2597x_check_vbus_error_status(bq);
 		break;
 	default:
 		pr_err_ratelimited("BQ2597x read IIO channel %x not supported\n",
-			chan->channel);
+			channel);
 		return -EINVAL;
 	}
 
 	if (ret < 0) {
 		pr_debug("Couldn't read channel %x ret = %d\n",
-				chan->channel, ret);
+				channel, ret);
 		return -ENODATA;
 	}
 
 	return IIO_VAL_INT;
+}
+
+static int bq2597x_charger_iio_set_prop(struct bq2597x *bq,
+					int channel, int val)
+{
+	switch (channel) {
+	case PSY_IIO_TI_CHARGING_ENABLED:
+		bq2597x_enable_charge(bq, val);
+		bq2597x_check_charge_enabled(bq, &bq->charge_enabled);
+		bq_info("PSY_IIO_TI_CHARGING_ENABLED: %s\n",
+			val ? "enable" : "disable");
+		break;
+	case PSY_IIO_TI_SET_BUS_PROTECTION_FOR_QC3:
+		bq2597x_set_bus_protection(bq, val);
+		break;
+	default:
+		pr_err_ratelimited("BQ2597x write IIO channel %x not supported\n",
+			channel);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int bq2597x_charger_iio_read_raw(struct iio_dev *indio_dev,
+					struct iio_chan_spec const *chan, int *val1,
+					int *val2, long mask)
+{
+	struct bq2597x *bq = iio_priv(indio_dev);
+
+	return bq2597x_charger_iio_get_prop(bq, chan->channel, val1);
 }
 
 static int bq2597x_charger_iio_write_raw(struct iio_dev *indio_dev,
@@ -1908,23 +1936,7 @@ static int bq2597x_charger_iio_write_raw(struct iio_dev *indio_dev,
 {
 	struct bq2597x *bq = iio_priv(indio_dev);
 
-	switch (chan->channel) {
-	case PSY_IIO_TI_CHARGING_ENABLED:
-		bq2597x_enable_charge(bq, val1);
-		bq2597x_check_charge_enabled(bq, &bq->charge_enabled);
-		bq_info("PSY_IIO_TI_CHARGING_ENABLED: %s\n",
-			val1 ? "enable" : "disable");
-		break;
-	case PSY_IIO_TI_SET_BUS_PROTECTION_FOR_QC3:
-		bq2597x_set_bus_protection(bq, val1);
-		break;
-	default:
-		pr_err_ratelimited("BQ2597x write IIO channel %x not supported\n",
-			chan->channel);
-		return -EINVAL;
-	}
-
-	return 0;
+	return bq2597x_charger_iio_set_prop(bq, chan->channel, val1);
 }
 
 static int bq2597x_charger_of_xlate(struct iio_dev *indio_dev,
@@ -1947,6 +1959,22 @@ static const struct iio_info bq2597x_iio_info = {
 	.write_raw	= bq2597x_charger_iio_write_raw,
 	.of_xlate	= bq2597x_charger_of_xlate,
 };
+
+static int bq2597x_charger_direct_iio_read(struct device *dev,
+					   int iio_chan, int *val)
+{
+	struct bq2597x *bq = dev_get_drvdata(dev);
+
+	return bq2597x_charger_iio_get_prop(bq, iio_chan, val);
+}
+
+static int bq2597x_charger_direct_iio_write(struct device *dev,
+					    int iio_chan, int val)
+{
+	struct bq2597x *bq = dev_get_drvdata(dev);
+
+	return bq2597x_charger_iio_set_prop(bq, iio_chan, val);
+}
 
 static int bq2597x_charger_init_iio(struct bq2597x *bq)
 {
@@ -2148,6 +2176,12 @@ static int bq2597x_charger_probe(struct i2c_client *client,
 		goto err_1;
 	}
 
+	bq->bq_main.dev = bq->dev;
+	bq->bq_main.indio_dev = bq->indio_dev;
+	bq->bq_main.ti_iio_read = bq2597x_charger_direct_iio_read;
+	bq->bq_main.ti_iio_write = bq2597x_charger_direct_iio_write;
+	ti_proxy_iio_register(&bq->bq_main);
+
 	determine_initial_status(bq);
 	/* schedule_delayed_work(&bq->monitor_work, 60 * HZ); */
 	bq_info("bq2597x probe successfully, Part Num:%d\n!", bq->part_no);
@@ -2219,6 +2253,8 @@ static int bq2597x_charger_remove(struct i2c_client *client)
 	struct bq2597x *bq = i2c_get_clientdata(client);
 
 	bq2597x_enable_adc(bq, false);
+
+	ti_proxy_iio_unregister(&bq->bq_main);
 
 	power_supply_unregister(bq->fc2_psy);
 
