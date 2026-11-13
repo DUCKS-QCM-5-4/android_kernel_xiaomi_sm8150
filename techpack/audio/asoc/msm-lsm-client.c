@@ -1999,6 +1999,19 @@ struct lsm_params_info_v2_32 {
 	u32 model_id;
 };
 
+/* 
+ * SNDRV_LSM_VERSION 0.3.1
+ */
+struct lsm_params_info_v2_32_legacy {
+	u32 module_id;
+	u32 param_id;
+	u32 param_size;
+	compat_uptr_t param_data;
+	uint32_t param_type;
+	u16 instance_id;
+	u16 stage_idx;
+};
+
 struct lsm_params_get_info_32 {
 	u32 module_id;
 	u16 instance_id;
@@ -2305,8 +2318,9 @@ static int msm_lsm_ioctl_compat(struct snd_pcm_substream *substream,
 		struct snd_lsm_module_params p_data;
 		u8 *params32;
 		size_t expected_size = 0, count;
+		bool v2_legacy = false;
 		struct lsm_params_info_32 *p_info_32 = NULL;
-		struct lsm_params_info_v2_32 *p_info_v2_32 = NULL;
+		struct lsm_params_info_v2_32_legacy *p_info_v2_32 = NULL;
 		struct lsm_params_info_v2 p_info;
 
 		if (!prtd->lsm_client->use_topology) {
@@ -2340,9 +2354,19 @@ static int msm_lsm_ioctl_compat(struct snd_pcm_substream *substream,
 			goto done;
 		}
 
-		expected_size = (cmd == SNDRV_LSM_SET_MODULE_PARAMS_32) ?
-					p_data.num_params * sizeof(struct lsm_params_info_32) :
-					p_data.num_params * sizeof(struct lsm_params_info_v2_32);
+		if (cmd == SNDRV_LSM_SET_MODULE_PARAMS_32) {
+			expected_size = p_data.num_params *
+					sizeof(struct lsm_params_info_32);
+		} else if (p_data.data_size == p_data.num_params *
+			   sizeof(struct lsm_params_info_v2_32_legacy)) {
+			/* userspace built against the pre-model_id uapi */
+			v2_legacy = true;
+			expected_size = p_data.num_params *
+				sizeof(struct lsm_params_info_v2_32_legacy);
+		} else {
+			expected_size = p_data.num_params *
+				sizeof(struct lsm_params_info_v2_32);
+		}
 
 		if (p_data.data_size != expected_size) {
 			dev_err(rtd->dev,
@@ -2372,7 +2396,8 @@ static int msm_lsm_ioctl_compat(struct snd_pcm_substream *substream,
 		if (cmd == SNDRV_LSM_SET_MODULE_PARAMS_32)
 			p_info_32 = (struct lsm_params_info_32 *) params32;
 		else
-			p_info_v2_32 = (struct lsm_params_info_v2_32 *) params32;
+			p_info_v2_32 =
+				(struct lsm_params_info_v2_32_legacy *) params32;
 
 		for (count = 0; count < p_data.num_params; count++) {
 			if (cmd == SNDRV_LSM_SET_MODULE_PARAMS_32) {
@@ -2399,13 +2424,21 @@ static int msm_lsm_ioctl_compat(struct snd_pcm_substream *substream,
 				/* set sound model id to 0 for backward compatibility */
 				p_info.model_id = 0;
 
-				if (LSM_REG_MULTI_SND_MODEL == p_info_v2_32->param_type ||
-				    LSM_DEREG_MULTI_SND_MODEL == p_info_v2_32->param_type ||
-				    LSM_MULTI_SND_MODEL_CONFIDENCE_LEVELS ==
-								p_info_v2_32->param_type)
-					p_info.model_id = p_info_v2_32->model_id;
+				if (!v2_legacy &&
+				    (LSM_REG_MULTI_SND_MODEL == p_info_v2_32->param_type ||
+				     LSM_DEREG_MULTI_SND_MODEL == p_info_v2_32->param_type ||
+				     LSM_MULTI_SND_MODEL_CONFIDENCE_LEVELS ==
+							p_info_v2_32->param_type))
+					p_info.model_id =
+						((struct lsm_params_info_v2_32 *)
+						 p_info_v2_32)->model_id;
 
-				p_info_v2_32++;
+				if (v2_legacy)
+					p_info_v2_32++;
+				else
+					p_info_v2_32 = (struct lsm_params_info_v2_32_legacy *)
+						((struct lsm_params_info_v2_32 *)
+						 p_info_v2_32 + 1);
 			}
 
 			err = msm_lsm_process_params(substream, &p_info);
@@ -2543,6 +2576,19 @@ done:
 #define msm_lsm_ioctl_compat NULL
 #endif
 
+/*
+ * SNDRV_LSM_VERSION 0.3.1
+ */
+struct lsm_params_info_v2_legacy {
+	__u32 module_id;
+	__u32 param_id;
+	__u32 param_size;
+	__u8 __user *param_data;
+	__u32 param_type;
+	__u16 instance_id;
+	__u16 stage_idx;
+};
+
 static int msm_lsm_ioctl(struct snd_pcm_substream *substream,
 			 unsigned int cmd, void __user *arg)
 {
@@ -2628,10 +2674,12 @@ static int msm_lsm_ioctl(struct snd_pcm_substream *substream,
 	case SNDRV_LSM_SET_MODULE_PARAMS_V2: {
 		struct snd_lsm_module_params p_data;
 		struct lsm_params_info *temp_ptr_info = NULL;
+		struct lsm_params_info_v2_legacy *temp_ptr_legacy = NULL;
 		struct lsm_params_info_v2 info_v2;
 		struct lsm_params_info_v2 *ptr_info_v2 = NULL, *temp_ptr_info_v2 = NULL;
 		size_t p_size = 0, count;
 		u8 *params;
+		bool v2_legacy = false;
 
 		memset(&info_v2, 0, sizeof(info_v2));
 
@@ -2661,10 +2709,17 @@ static int msm_lsm_ioctl(struct snd_pcm_substream *substream,
 			goto done;
 		}
 
-		if (cmd == SNDRV_LSM_SET_MODULE_PARAMS)
+		if (cmd == SNDRV_LSM_SET_MODULE_PARAMS) {
 			p_size = p_data.num_params * sizeof(struct lsm_params_info);
-		else
+		} else if (p_data.data_size == p_data.num_params *
+			   sizeof(struct lsm_params_info_v2_legacy)) {
+			/* userspace built against the pre-model_id uapi */
+			v2_legacy = true;
+			p_size = p_data.num_params *
+				 sizeof(struct lsm_params_info_v2_legacy);
+		} else {
 			p_size = p_data.num_params * sizeof(struct lsm_params_info_v2);
+		}
 
 		if (p_data.data_size != p_size) {
 			dev_err(rtd->dev,
@@ -2693,6 +2748,8 @@ static int msm_lsm_ioctl(struct snd_pcm_substream *substream,
 
 		if (cmd == SNDRV_LSM_SET_MODULE_PARAMS)
 			temp_ptr_info = (struct lsm_params_info *)params;
+		else if (v2_legacy)
+			temp_ptr_legacy = (struct lsm_params_info_v2_legacy *)params;
 		else
 			temp_ptr_info_v2 = (struct lsm_params_info_v2 *)params;
 
@@ -2711,6 +2768,19 @@ static int msm_lsm_ioctl(struct snd_pcm_substream *substream,
 
 				ptr_info_v2 = &info_v2;
 				temp_ptr_info++;
+			} else if (v2_legacy) {
+				/* old v2 layout: same as v2 with model_id = 0 */
+				info_v2.module_id = temp_ptr_legacy->module_id;
+				info_v2.param_id = temp_ptr_legacy->param_id;
+				info_v2.param_size = temp_ptr_legacy->param_size;
+				info_v2.param_data = temp_ptr_legacy->param_data;
+				info_v2.param_type = temp_ptr_legacy->param_type;
+				info_v2.instance_id = temp_ptr_legacy->instance_id;
+				info_v2.stage_idx = temp_ptr_legacy->stage_idx;
+				info_v2.model_id = 0;
+
+				ptr_info_v2 = &info_v2;
+				temp_ptr_legacy++;
 			} else {
 				if (LSM_REG_MULTI_SND_MODEL != temp_ptr_info_v2->param_type ||
 				    LSM_DEREG_MULTI_SND_MODEL !=
