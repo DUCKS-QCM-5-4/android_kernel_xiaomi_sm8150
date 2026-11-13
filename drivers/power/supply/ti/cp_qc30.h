@@ -223,6 +223,7 @@ typedef struct {
 
 	struct power_supply *sw_psy;
 	struct power_supply *usb_psy;
+	struct power_supply *ln8k;
 
 	/* jeita or thermal related */
 	bool jeita_triggered;
