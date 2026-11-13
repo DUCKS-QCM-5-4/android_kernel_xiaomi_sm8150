@@ -12,6 +12,8 @@
 #include <linux/qti_power_supply.h>
 #include <linux/workqueue.h>
 
+#include "ti_charger_iio.h"
+
 typedef enum {
 	CP_STATE_ENTRY,
 	CP_STATE_DISCONNECT,

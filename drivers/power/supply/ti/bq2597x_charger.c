@@ -1755,6 +1755,7 @@ static void determine_initial_status(struct bq2597x *bq)
 		bq2597x_charger_interrupt(bq->client->irq, bq);
 }
 
+#ifdef CONFIG_DEBUG_FS
 static int show_registers(struct seq_file *m, void *data)
 {
 	struct bq2597x *bq = m->private;
@@ -1769,6 +1770,7 @@ static int show_registers(struct seq_file *m, void *data)
 	}
 	return 0;
 }
+#endif
 
 static int bq2597x_charger_iio_read_raw(struct iio_dev *indio_dev,
 					struct iio_chan_spec const *chan, int *val1,
@@ -1783,72 +1785,72 @@ static int bq2597x_charger_iio_read_raw(struct iio_dev *indio_dev,
 	*val2 = 0;
 
 	switch (chan->channel) {
-	case PSY_IIO_BQ_CHARGING_ENABLED:
+	case PSY_IIO_TI_CHARGING_ENABLED:
 		bq2597x_check_charge_enabled(bq, &bq->charge_enabled);
 		*val1 = bq->charge_enabled;
 		break;
-	case  PSY_IIO_BQ_BATTERY_PRESENT:
+	case  PSY_IIO_TI_BATTERY_PRESENT:
 		ret = bq2597x_read_byte(bq, BQ2597X_REG_0D, &reg_val);
 		if (!ret)
 			bq->batt_present = !!(reg_val & VBAT_INSERT);
 		*val1 = bq->batt_present;
 		break;
-	case PSY_IIO_BQ_VBUS_PRESENT:
+	case PSY_IIO_TI_VBUS_PRESENT:
 		ret = bq2597x_read_byte(bq, BQ2597X_REG_0D, &reg_val);
 		if (!ret)
 			bq->vbus_present = !!(reg_val & VBUS_INSERT);
 		*val1 = bq->vbus_present;
 		break;
-	case PSY_IIO_BQ_BATTERY_VOLTAGE:
+	case PSY_IIO_TI_BATTERY_VOLTAGE:
 		ret = bq2597x_get_adc_data(bq, ADC_VBAT, &result);
 		if (!ret)
 			bq->vbat_volt = result;
 
 		*val1 = bq->vbat_volt;
 		break;
-	case PSY_IIO_BQ_BATTERY_CURRENT:
+	case PSY_IIO_TI_BATTERY_CURRENT:
 		ret = bq2597x_get_adc_data(bq, ADC_IBAT, &result);
 		if (!ret)
 			bq->ibat_curr = result;
 
 		*val1 = bq->ibat_curr;
 		break;
-	case PSY_IIO_BQ_BATTERY_TEMPERATURE:
+	case PSY_IIO_TI_BATTERY_TEMPERATURE:
 		ret = bq2597x_get_adc_data(bq, ADC_TBAT, &result);
 		if (!ret)
 			bq->bat_temp = result;
 
 		*val1 = bq->bat_temp;
 		break;
-	case PSY_IIO_BQ_BUS_VOLTAGE:
+	case PSY_IIO_TI_BUS_VOLTAGE:
 		ret = bq2597x_get_adc_data(bq, ADC_VBUS, &result);
 		if (!ret)
 			bq->vbus_volt = result;
 
 		*val1 = bq->vbus_volt;
 		break;
-	case PSY_IIO_BQ_BUS_CURRENT:
+	case PSY_IIO_TI_BUS_CURRENT:
 		ret = bq2597x_get_adc_data(bq, ADC_IBUS, &result);
 		if (!ret)
 			bq->ibus_curr = result;
 
 		*val1 = bq->ibus_curr;
 		break;
-	case PSY_IIO_BQ_BUS_TEMPERATURE:
+	case PSY_IIO_TI_BUS_TEMPERATURE:
 		ret = bq2597x_get_adc_data(bq, ADC_TBUS, &result);
 		if (!ret)
 			bq->bus_temp = result;
 
 		*val1 = bq->bus_temp;
 		break;
-	case PSY_IIO_BQ_DIE_TEMPERATURE:
+	case PSY_IIO_TI_DIE_TEMPERATURE:
 		ret = bq2597x_get_adc_data(bq, ADC_TDIE, &result);
 		if (!ret)
 			bq->die_temp = result;
 
 		*val1 = bq->die_temp;
 		break;
-	case PSY_IIO_BQ_ALARM_STATUS:
+	case PSY_IIO_TI_ALARM_STATUS:
 
 		bq2597x_check_alarm_status(bq);
 
@@ -1862,7 +1864,7 @@ static int bq2597x_charger_iio_read_raw(struct iio_dev *indio_dev,
 			       (bq->die_therm_alarm << DIE_THERM_ALARM_SHIFT));
 		break;
 
-	case PSY_IIO_BQ_FAULT_STATUS:
+	case PSY_IIO_TI_FAULT_STATUS:
 		bq2597x_check_fault_status(bq);
 
 		*val1 = ((bq->bat_ovp_fault << BAT_OVP_FAULT_SHIFT) |
@@ -1874,15 +1876,15 @@ static int bq2597x_charger_iio_read_raw(struct iio_dev *indio_dev,
 			       (bq->die_therm_fault << DIE_THERM_FAULT_SHIFT));
 		break;
 
-	case PSY_IIO_BQ_REG_STATUS:
+	case PSY_IIO_TI_REG_STATUS:
 		bq2597x_check_reg_status(bq);
 		*val1 = (bq->vbat_reg << VBAT_REG_STATUS_SHIFT) |
 			      (bq->ibat_reg << IBAT_REG_STATUS_SHIFT);
 		break;
-	case PSY_IIO_BQ_SET_BUS_PROTECTION_FOR_QC3:
+	case PSY_IIO_TI_SET_BUS_PROTECTION_FOR_QC3:
 		*val1 = 0;
 		break;
-	case PSY_IIO_BQ_BUS_ERROR_STATUS:
+	case PSY_IIO_TI_BUS_ERROR_STATUS:
 		*val1 = bq2597x_check_vbus_error_status(bq);
 		break;
 	default:
@@ -1907,13 +1909,13 @@ static int bq2597x_charger_iio_write_raw(struct iio_dev *indio_dev,
 	struct bq2597x *bq = iio_priv(indio_dev);
 
 	switch (chan->channel) {
-	case PSY_IIO_BQ_CHARGING_ENABLED:
+	case PSY_IIO_TI_CHARGING_ENABLED:
 		bq2597x_enable_charge(bq, val1);
 		bq2597x_check_charge_enabled(bq, &bq->charge_enabled);
-		bq_info("PSY_IIO_BQ_CHARGING_ENABLED: %s\n",
+		bq_info("PSY_IIO_TI_CHARGING_ENABLED: %s\n",
 			val1 ? "enable" : "disable");
 		break;
-	case PSY_IIO_BQ_SET_BUS_PROTECTION_FOR_QC3:
+	case PSY_IIO_TI_SET_BUS_PROTECTION_FOR_QC3:
 		bq2597x_set_bus_protection(bq, val1);
 		break;
 	default:
@@ -1932,7 +1934,7 @@ static int bq2597x_charger_of_xlate(struct iio_dev *indio_dev,
 	struct iio_chan_spec *iio_chan = bq->iio_chan;
 	int i;
 
-	for (i = 0; i < ARRAY_SIZE(bq2597x_charger_iio_psy_channels);
+	for (i = 0; i < ARRAY_SIZE(ti_charger_iio_psy_channels);
 					i++, iio_chan++)
 		if (iio_chan->channel == iiospec->args[0])
 			return i;
@@ -1946,11 +1948,11 @@ static const struct iio_info bq2597x_iio_info = {
 	.of_xlate	= bq2597x_charger_of_xlate,
 };
 
-static int bq2597x_charger_init_iio_psy(struct bq2597x *bq)
+static int bq2597x_charger_init_iio(struct bq2597x *bq)
 {
 	struct iio_dev *indio_dev = bq->indio_dev;
 	struct iio_chan_spec *chan;
-	int bq2597x_num_iio_channels = ARRAY_SIZE(bq2597x_charger_iio_psy_channels);
+	int bq2597x_num_iio_channels = ARRAY_SIZE(ti_charger_iio_psy_channels);
 	int rc, i;
 
 	bq->iio_chan = devm_kcalloc(bq->dev, bq2597x_num_iio_channels,
@@ -1978,14 +1980,14 @@ static int bq2597x_charger_init_iio_psy(struct bq2597x *bq)
 		chan = &bq->iio_chan[i];
 		bq->int_iio_chans[i].channel = chan;
 		chan->address = i;
-		chan->channel = bq2597x_charger_iio_psy_channels[i].channel_num;
-		chan->type = bq2597x_charger_iio_psy_channels[i].type;
+		chan->channel = ti_charger_iio_psy_channels[i].channel_num;
+		chan->type = ti_charger_iio_psy_channels[i].type;
 		chan->datasheet_name =
-			bq2597x_charger_iio_psy_channels[i].datasheet_name;
+			ti_charger_iio_psy_channels[i].datasheet_name;
 		chan->extend_name =
-			bq2597x_charger_iio_psy_channels[i].datasheet_name;
+			ti_charger_iio_psy_channels[i].datasheet_name;
 		chan->info_mask_separate =
-			bq2597x_charger_iio_psy_channels[i].info_mask;
+			ti_charger_iio_psy_channels[i].info_mask;
 	}
 
 	rc = devm_iio_device_register(bq->dev, indio_dev);
@@ -1995,6 +1997,7 @@ static int bq2597x_charger_init_iio_psy(struct bq2597x *bq)
 	return rc;
 }
 
+#ifdef CONFIG_DEBUG_FS
 static int reg_debugfs_open(struct inode *inode, struct file *file)
 {
 	struct bq2597x *bq = inode->i_private;
@@ -2032,6 +2035,7 @@ static void create_debugfs_entry(struct bq2597x *bq)
 				   bq->debug_root, &(bq->skip_writes));
 	}
 }
+#endif
 
 static struct of_device_id bq2597x_charger_match_table[] = {
 	{
@@ -2098,7 +2102,7 @@ static int bq2597x_charger_probe(struct i2c_client *client,
 		return -EINVAL;
 	}
 
-	ret = bq2597x_charger_init_iio_psy(bq);
+	ret = bq2597x_charger_init_iio(bq);
 	if (ret < 0) {
 		pr_err("failed to initialize BQ2597x IIO PSY, ret=%d\n", ret);
 		return ret;
@@ -2134,7 +2138,9 @@ static int bq2597x_charger_probe(struct i2c_client *client,
 
 	INIT_DELAYED_WORK(&bq->monitor_work, bq2597x_monitor_work);
 	device_init_wakeup(bq->dev, 1);
+#ifdef CONFIG_DEBUG_FS
 	create_debugfs_entry(bq);
+#endif
 
 	ret = sysfs_create_group(&bq->dev->kobj, &bq2597x_attr_group);
 	if (ret) {
@@ -2221,7 +2227,9 @@ static int bq2597x_charger_remove(struct i2c_client *client)
 	mutex_destroy(&bq->i2c_rw_lock);
 	mutex_destroy(&bq->irq_complete);
 
+#ifdef CONFIG_DEBUG_FS
 	debugfs_remove_recursive(bq->debug_root);
+#endif
 
 	sysfs_remove_group(&bq->dev->kobj, &bq2597x_attr_group);
 

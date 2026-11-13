@@ -95,112 +95,218 @@ static int fc2_taper_timer;
 static int cool_overcharge_timer;
 static int ibus_lmt_change_timer;
 
-enum pd_pl_main_ext_iio_channels {
-	PD_PL_PSY_IIO_BQ_BATTERY_VOLTAGE = 0,
-	PD_PL_PSY_IIO_BQ_BUS_VOLTAGE,
-	PD_PL_PSY_IIO_BQ_BUS_CURRENT,
-	PD_PL_PSY_IIO_BQ_BUS_TEMPERATURE,
-	PD_PL_PSY_IIO_BQ_BATTERY_TEMPERATURE,
-	PD_PL_PSY_IIO_BQ_DIE_TEMPERATURE,
-	PD_PL_PSY_IIO_BQ_BATTERY_PRESENT,
-	PD_PL_PSY_IIO_BQ_VBUS_PRESENT,
-	PD_PL_PSY_IIO_BQ_ALARM_STATUS,
-	PD_PL_PSY_IIO_BQ_FAULT_STATUS,
-	PD_PL_PSY_IIO_BQ_REG_STATUS,
-	PD_PL_PSY_IIO_BQ_FASTCHARGE_MODE,
-	PD_PL_PSY_IIO_BQ_CHARGING_ENABLED,
-	PD_PL_PSY_IIO_BQ_BATTERY_CHARGING_LIMITED,
-	PD_PL_PSY_IIO_BQ_BATTERY_CHARGING_ENABLED,
-	PD_PL_PSY_IIO_BQ_INPUT_SUSPEND,
-	PD_PL_PSY_IIO_BQ_SLOWLY_CHARGING,
-	PD_PL_PSY_IIO_APDO_MAX,
-	PD_PL_PSY_IIO_TYPEC_POWER_ROLE,
-	PD_PL_PSY_IIO_PD_ACTIVE,
-	PD_PL_PSY_IIO_PD_AUTHENTICATION,
-	PD_PL_PSY_IIO_TEMP,
-	PD_PL_PSY_IIO_CURRENT_NOW,
-	PD_PL_PSY_IIO_CAPACITY,
+/* IIO Config start */
+enum usbpd_ext_iio_type {
+	USBPD_IIO_TI,
+	USBPD_IIO_MAIN,
+	USBPD_IIO_QG,
 };
 
-static const char * const pd_pl_ext_iio_channels[] = {
-	[PD_PL_PSY_IIO_BQ_BATTERY_VOLTAGE] = "battery_voltage",
-	[PD_PL_PSY_IIO_BQ_BUS_VOLTAGE] = "bus_voltage",
-	[PD_PL_PSY_IIO_BQ_BUS_CURRENT] = "bus_current",
-	[PD_PL_PSY_IIO_BQ_BUS_TEMPERATURE]	= "bus_temp",
-	[PD_PL_PSY_IIO_BQ_BATTERY_TEMPERATURE]	= "battery_temp",
-	[PD_PL_PSY_IIO_BQ_DIE_TEMPERATURE]	= "die_temp",
-	[PD_PL_PSY_IIO_BQ_BATTERY_PRESENT]	= "battery_preset",
-	[PD_PL_PSY_IIO_BQ_VBUS_PRESENT]	= "vbus_present",
-	[PD_PL_PSY_IIO_BQ_ALARM_STATUS]	= "alarm_status",
-	[PD_PL_PSY_IIO_BQ_FAULT_STATUS]	= "fault_status",
-	[PD_PL_PSY_IIO_BQ_REG_STATUS]	 = "reg_status",
-	[PD_PL_PSY_IIO_BQ_FASTCHARGE_MODE]	 = "bq_fastcharge_mode",
-	[PD_PL_PSY_IIO_BQ_CHARGING_ENABLED]	= "charging_enabled",
-	[PD_PL_PSY_IIO_BQ_BATTERY_CHARGING_LIMITED]	= "bat_charging_limit",
-	[PD_PL_PSY_IIO_BQ_BATTERY_CHARGING_ENABLED]	= "bat_charging_enabled",
-	[PD_PL_PSY_IIO_BQ_INPUT_SUSPEND]	= "bq_input_suspend",
-	[PD_PL_PSY_IIO_BQ_SLOWLY_CHARGING]	= "slowly_charging",
-	[PD_PL_PSY_IIO_APDO_MAX]	= "apdo_max",
-	[PD_PL_PSY_IIO_TYPEC_POWER_ROLE]	= "typec_power_role",
-	[PD_PL_PSY_IIO_PD_ACTIVE]	= "pd_active",
-	[PD_PL_PSY_IIO_PD_AUTHENTICATION]	= "pd_authen",
+enum usbpd_ext_ti_iio_channels {
+	PD_TI_BATTERY_PRESENT = 0,
+	PD_TI_VBUS_PRESENT,
+	PD_TI_BATTERY_VOLTAGE,
+	PD_TI_BATTERY_TEMPERATURE,
+	PD_TI_BUS_VOLTAGE,
+	PD_TI_BUS_CURRENT,
+	PD_TI_BUS_TEMPERATURE,
+	PD_TI_DIE_TEMPERATURE,
+	PD_TI_ALARM_STATUS,
+	PD_TI_FAULT_STATUS,
+	PD_TI_REG_STATUS,
+	PD_TI_CHARGING_ENABLED,
+};
+
+static const char * const usbpd_ext_ti_iio_chan[] = {
+	[PD_TI_BATTERY_PRESENT]	= "battery_preset",
+	[PD_TI_VBUS_PRESENT]	= "vbus_present",
+	[PD_TI_BATTERY_VOLTAGE] = "battery_voltage",
+	[PD_TI_BATTERY_TEMPERATURE]	= "battery_temp",
+	[PD_TI_BUS_VOLTAGE] = "bus_voltage",
+	[PD_TI_BUS_CURRENT] = "bus_current",
+	[PD_TI_BUS_TEMPERATURE]	= "bus_temp",
+	[PD_TI_DIE_TEMPERATURE]	= "die_temp",
+	[PD_TI_ALARM_STATUS]	= "alarm_status",
+	[PD_TI_FAULT_STATUS]	= "fault_status",
+	[PD_TI_REG_STATUS]	 = "reg_status",
+	[PD_TI_CHARGING_ENABLED]	= "charging_enabled",
+};
+
+enum usbpd_ext_main_iio_channels {
+	/* TI IIO Channels */
+	PD_MAIN_BATTERY_CHARGING_LIMITED = 0,
+	PD_MAIN_BATTERY_CHARGING_ENABLED,
+	PD_MAIN_INPUT_SUSPEND,
+	PD_MAIN_SLOWLY_CHARGING,
+	PD_MAIN_APDO_MAX,
+	PD_MAIN_TYPEC_POWER_ROLE,
+	PD_MAIN_PD_ACTIVE,
+	PD_MAIN_PD_AUTHENTICATION,
+};
+
+static const char * const usbpd_ext_main_iio_chan[] = {
+	/* Main IIO Channels*/
+	[PD_MAIN_BATTERY_CHARGING_LIMITED]	= "bat_charging_limit",
+	[PD_MAIN_BATTERY_CHARGING_ENABLED]	= "bat_charging_enabled",
+	[PD_MAIN_INPUT_SUSPEND]	= "bq_input_suspend",
+	[PD_MAIN_SLOWLY_CHARGING]	= "slowly_charging",
+	[PD_MAIN_APDO_MAX]	= "apdo_max",
+	[PD_MAIN_TYPEC_POWER_ROLE]	= "typec_power_role",
+	[PD_MAIN_PD_ACTIVE]	= "pd_active",
+	[PD_MAIN_PD_AUTHENTICATION]	= "pd_authen",
+};
+
+enum usbpd_ext_qg_iio_channels {
+	PD_QG_TEMP = 0,
+	PD_QG_CURRENT_NOW,
+	PD_QG_CAPACITY,
+	PD_QG_FASTCHARGE_MODE,
+};
+
+static const char * const usbpd_ext_qg_iio_chan[] = {
 	/* QG IIO Channels*/
-	[PD_PL_PSY_IIO_TEMP]	= "temp",
-	[PD_PL_PSY_IIO_CURRENT_NOW]	= "current_now",
-	[PD_PL_PSY_IIO_CAPACITY] = "capacity",
+	[PD_QG_TEMP]	= "temp",
+	[PD_QG_CURRENT_NOW]	= "current_now",
+	[PD_QG_CAPACITY] = "capacity",
+	[PD_QG_FASTCHARGE_MODE]	 = "bq_fastcharge_mode",
 };
 
-static int pd_pl_get_psy_iio_property(struct usbpd_pm *pdpm,
-						int iio_chan, int *val)
+static int usbpd_read_iio_prop(struct usbpd_pm *pdpm,
+		enum usbpd_ext_iio_type type, int iio_chan,
+		int *val)
 {
 	struct iio_channel *iio_chan_list;
 	int rc;
 
-	if (IS_ERR_OR_NULL(pdpm->ext_main_iio_channels))
-		return -ENODEV;
-	iio_chan_list = pdpm->ext_main_iio_channels[iio_chan];
+	switch (type) {
+	case USBPD_IIO_TI:
+		if (IS_ERR_OR_NULL(pdpm->iio_chan_list_usbpd_ti))
+			return -ENODEV;
+		iio_chan_list = pdpm->iio_chan_list_usbpd_ti[iio_chan];
+		break;
+	case USBPD_IIO_MAIN:
+		if (IS_ERR_OR_NULL(pdpm->iio_chan_list_usbpd_main))
+			return -ENODEV;
+		iio_chan_list = pdpm->iio_chan_list_usbpd_main[iio_chan];
+		break;
+	case USBPD_IIO_QG:
+		if (IS_ERR_OR_NULL(pdpm->iio_chan_list_usbpd_qg))
+			return -ENODEV;
+		iio_chan_list = pdpm->iio_chan_list_usbpd_qg[iio_chan];
+		break;
+	default:
+		pr_err_ratelimited("usbpd-pm: iio_type %d is not supported\n", type);
+		return -EINVAL;
+	}
 
 	rc = iio_read_channel_processed(iio_chan_list, val);
-	return rc < 0 ? rc : 0;
+	return (rc < 0) ? rc : 0;
 }
 
-static int pd_pl_set_psy_iio_property(struct usbpd_pm *pdpm,
-						int iio_chan, int val)
+static int usbpd_write_iio_prop(struct usbpd_pm *pdpm,
+		enum usbpd_ext_iio_type type, int iio_chan,
+		int val)
 {
 	struct iio_channel *iio_chan_list;
 
-	if (IS_ERR_OR_NULL(pdpm->ext_main_iio_channels))
-		return -ENODEV;
-	iio_chan_list = pdpm->ext_main_iio_channels[iio_chan];
+	switch (type) {
+	case USBPD_IIO_TI:
+		if (IS_ERR_OR_NULL(pdpm->iio_chan_list_usbpd_ti))
+			return -ENODEV;
+		iio_chan_list = pdpm->iio_chan_list_usbpd_ti[iio_chan];
+		break;
+	case USBPD_IIO_MAIN:
+		if (IS_ERR_OR_NULL(pdpm->iio_chan_list_usbpd_main))
+			return -ENODEV;
+		iio_chan_list = pdpm->iio_chan_list_usbpd_main[iio_chan];
+		break;
+	case USBPD_IIO_QG:
+		if (IS_ERR_OR_NULL(pdpm->iio_chan_list_usbpd_qg))
+			return -ENODEV;
+		iio_chan_list = pdpm->iio_chan_list_usbpd_qg[iio_chan];
+		break;
+	default:
+		pr_err_ratelimited("usbpd-pm: iio_type %d is not supported\n", type);
+		return -EINVAL;
+	}
 
 	return iio_write_channel_raw(iio_chan_list, val);
 }
 
-static bool is_pd_pl_ext_iio_available(struct usbpd_pm *pdpm)
+static bool is_usbpd_iio_available(struct usbpd_pm *pdpm,
+		enum usbpd_ext_iio_type type)
 {
 	int rc;
 	struct iio_channel **iio_list;
 
-	if (IS_ERR(pdpm->ext_main_iio_channels))
-		return false;
-
-	if (!pdpm->ext_main_iio_channels) {
-		iio_list = get_bq_ext_channels(pdpm->dev,
-			pd_pl_ext_iio_channels,
-			ARRAY_SIZE(pd_pl_ext_iio_channels));
-		if (IS_ERR(iio_list)) {
-			rc = PTR_ERR(iio_list);
-			if (rc != -EPROBE_DEFER) {
-				dev_err(pdpm->dev, "Failed to get channels, rc=%d\n",
-						rc);
-				pdpm->ext_main_iio_channels = ERR_PTR(-EINVAL);
-			}
+	switch (type) {
+	case USBPD_IIO_TI:
+		if (IS_ERR(pdpm->iio_chan_list_usbpd_ti))
 			return false;
+
+		if (!pdpm->iio_chan_list_usbpd_ti) {
+			iio_list = get_ti_ext_channels(pdpm->dev,
+					usbpd_ext_ti_iio_chan,
+					ARRAY_SIZE(usbpd_ext_ti_iio_chan));
+			if (IS_ERR(iio_list)) {
+				rc = PTR_ERR(iio_list);
+				if (rc != -EPROBE_DEFER) {
+					dev_err(pdpm->dev,
+						"Failed to get USBPD_IIO_TI channels, rc=%d\n", rc);
+					pdpm->iio_chan_list_usbpd_ti = ERR_PTR(-EINVAL);
+				}
+				return false;
+			}
+			pdpm->iio_chan_list_usbpd_ti = iio_list;
 		}
-		pdpm->ext_main_iio_channels = iio_list;
+		break;
+	case USBPD_IIO_MAIN:
+		if (IS_ERR(pdpm->iio_chan_list_usbpd_main))
+			return false;
+
+		if (!pdpm->iio_chan_list_usbpd_main) {
+			iio_list = get_ti_ext_channels(pdpm->dev,
+					usbpd_ext_main_iio_chan,
+					ARRAY_SIZE(usbpd_ext_main_iio_chan));
+			if (IS_ERR(iio_list)) {
+				rc = PTR_ERR(iio_list);
+				if (rc != -EPROBE_DEFER) {
+					dev_err(pdpm->dev,
+						"Failed to get USBPD_IIO_MAIN channels, rc=%d\n", rc);
+					pdpm->iio_chan_list_usbpd_main = ERR_PTR(-EINVAL);
+				}
+				return false;
+			}
+			pdpm->iio_chan_list_usbpd_main = iio_list;
+		}
+		break;
+	case USBPD_IIO_QG:
+		if (IS_ERR(pdpm->iio_chan_list_usbpd_qg))
+			return false;
+
+		if (!pdpm->iio_chan_list_usbpd_qg) {
+			iio_list = get_ti_ext_channels(pdpm->dev,
+					usbpd_ext_qg_iio_chan,
+					ARRAY_SIZE(usbpd_ext_qg_iio_chan));
+			if (IS_ERR(iio_list)) {
+				rc = PTR_ERR(iio_list);
+				if (rc != -EPROBE_DEFER) {
+					dev_err(pdpm->dev,
+						"Failed to get USBPD_IIO_QG channels, rc=%d\n", rc);
+					pdpm->iio_chan_list_usbpd_qg = ERR_PTR(-EINVAL);
+				}
+				return false;
+			}
+			pdpm->iio_chan_list_usbpd_qg = iio_list;
+		}
+		break;
+	default:
+		pr_err_ratelimited("usbpd-pm: iio_type %d is not supported\n", type);
+		return false;
 	}
 	return true;
 }
+/* IIO Config end */
 
 static void usbpd_check_usb_psy(struct usbpd_pm *pdpm)
 {
@@ -250,10 +356,10 @@ static int pd_get_batt_capacity(struct usbpd_pm *pdpm, int *capacity)
 {
 	int rc = 0, val = 0;
 
-	if (!is_pd_pl_ext_iio_available(pdpm))
+	if (!is_usbpd_iio_available(pdpm, USBPD_IIO_QG))
 		return -ENODEV;
 
-	rc = pd_pl_get_psy_iio_property(pdpm, PD_PL_PSY_IIO_CAPACITY,
+	rc = usbpd_read_iio_prop(pdpm, USBPD_IIO_QG, PD_QG_CAPACITY,
 				       &val);
 	if (rc < 0) {
 		pr_info("Couldn't get fastcharge mode:%d\n", rc);
@@ -270,15 +376,18 @@ static bool pd_disable_cp_by_jeita_status(struct usbpd_pm *pdpm)
 {
 	int rc, batt_temp = 0, bq_input_suspend = 0, val = 0;
 
-	if (!is_pd_pl_ext_iio_available(pdpm))
+	if (!is_usbpd_iio_available(pdpm, USBPD_IIO_MAIN))
 		return -ENODEV;
 
-	rc = pd_pl_get_psy_iio_property(
-		pdpm, PD_PL_PSY_IIO_BQ_INPUT_SUSPEND, &val);
+	rc = usbpd_read_iio_prop(pdpm, USBPD_IIO_MAIN,
+				PD_MAIN_INPUT_SUSPEND, &val);
 	if (!rc)
 		bq_input_suspend = !!val;
 
-	rc = pd_pl_get_psy_iio_property(pdpm, PD_PL_PSY_IIO_TEMP,
+	if (!is_usbpd_iio_available(pdpm, USBPD_IIO_QG))
+		return false;
+
+	rc = usbpd_read_iio_prop(pdpm, USBPD_IIO_QG, PD_QG_TEMP,
 				       &val);
 	if (rc < 0) {
 		pr_info("Couldn't get batt temp prop:%d\n", rc);
@@ -313,10 +422,10 @@ static bool is_cool_charge(struct usbpd_pm *pdpm)
 	int batt_temp = 0, val = 0;
 	int rc;
 
-	if (!is_pd_pl_ext_iio_available(pdpm))
+	if (!is_usbpd_iio_available(pdpm, USBPD_IIO_QG))
 		return false;
 
-	rc = pd_pl_get_psy_iio_property(pdpm, PD_PL_PSY_IIO_TEMP,
+	rc = usbpd_read_iio_prop(pdpm, USBPD_IIO_QG, PD_QG_TEMP,
 				       &val);
 	if (rc < 0) {
 		pr_info("Couldn't get batt temp prop:%d\n", rc);
@@ -343,11 +452,11 @@ static bool pd_get_pps_charger_verified(struct usbpd_pm *pdpm)
 {
 	int rc, val = 0;
 
-	if (!is_pd_pl_ext_iio_available(pdpm))
+	if (!is_usbpd_iio_available(pdpm, USBPD_IIO_MAIN))
 		return false;
 
-	rc = pd_pl_get_psy_iio_property(pdpm,
-				PD_PL_PSY_IIO_PD_AUTHENTICATION, &val);
+	rc = usbpd_read_iio_prop(pdpm, USBPD_IIO_MAIN,
+				PD_MAIN_PD_AUTHENTICATION, &val);
 	if (rc < 0) {
 		pr_info("Couldn't get pd_authentication result:%d\n", rc);
 		return false;
@@ -445,71 +554,73 @@ static void usbpd_pm_update_cp_status(struct usbpd_pm *pdpm)
 {
 	int ret, val = 0;
 
-	if (!is_pd_pl_ext_iio_available(pdpm))
+	if (!is_usbpd_iio_available(pdpm, USBPD_IIO_TI))
 		return;
 
-	ret = pd_pl_get_psy_iio_property(
-		pdpm, PD_PL_PSY_IIO_BQ_BATTERY_VOLTAGE, &val);
+	ret = usbpd_read_iio_prop(pdpm, USBPD_IIO_TI,
+				PD_TI_BATTERY_VOLTAGE, &val);
 	if (!ret)
 		pdpm->cp.vbat_volt = val;
 
-	ret = pd_pl_get_psy_iio_property(pdpm,
-					PD_PL_PSY_IIO_BQ_BUS_VOLTAGE, &val);
+	ret = usbpd_read_iio_prop(pdpm, USBPD_IIO_TI,
+					PD_TI_BUS_VOLTAGE, &val);
 	if (!ret)
 		pdpm->cp.vbus_volt = val;
 
-	ret = pd_pl_get_psy_iio_property(pdpm,
-					PD_PL_PSY_IIO_BQ_BUS_CURRENT, &val);
+	ret = usbpd_read_iio_prop(pdpm, USBPD_IIO_TI,
+					PD_TI_BUS_CURRENT, &val);
 	if (!ret)
 		pdpm->cp.ibus_curr = val;
 
-	ret = pd_pl_get_psy_iio_property(
-		pdpm, PD_PL_PSY_IIO_BQ_BUS_TEMPERATURE, &val);
+	ret = usbpd_read_iio_prop(pdpm, USBPD_IIO_TI,
+				PD_TI_BUS_TEMPERATURE, &val);
 	if (!ret)
 		pdpm->cp.bus_temp = val;
 
-	ret = pd_pl_get_psy_iio_property(
-		pdpm, PD_PL_PSY_IIO_BQ_BATTERY_TEMPERATURE, &val);
+	ret = usbpd_read_iio_prop(pdpm, USBPD_IIO_TI,
+				PD_TI_BATTERY_TEMPERATURE, &val);
 	if (!ret)
 		pdpm->cp.bat_temp = val;
 
-	ret = pd_pl_get_psy_iio_property(
-		pdpm, PD_PL_PSY_IIO_BQ_DIE_TEMPERATURE, &val);
+	ret = usbpd_read_iio_prop(pdpm, USBPD_IIO_TI,
+				PD_TI_DIE_TEMPERATURE, &val);
 	if (!ret)
 		pdpm->cp.die_temp = val;
 
-	ret = pd_pl_get_psy_iio_property(
-		pdpm, PD_PL_PSY_IIO_BQ_BATTERY_PRESENT, &val);
+	ret = usbpd_read_iio_prop(pdpm, USBPD_IIO_TI,
+				PD_TI_BATTERY_PRESENT, &val);
 	if (!ret)
 		pdpm->cp.batt_pres = val;
 
-	ret = pd_pl_get_psy_iio_property(
-		pdpm, PD_PL_PSY_IIO_BQ_VBUS_PRESENT, &val);
+	ret = usbpd_read_iio_prop(pdpm, USBPD_IIO_TI,
+				PD_TI_VBUS_PRESENT, &val);
 	if (!ret)
 		pdpm->cp.vbus_pres = val;
 
-	ret = pd_pl_get_psy_iio_property(
-		pdpm, PD_PL_PSY_IIO_CURRENT_NOW, &val);
-	if (!ret) {
-		if (pdpm->cp.vbus_pres)
-			pdpm->cp.ibat_curr = -(val / 1000);
+	if (is_usbpd_iio_available(pdpm, USBPD_IIO_QG)) {
+		ret = usbpd_read_iio_prop(pdpm, USBPD_IIO_QG,
+					PD_QG_CURRENT_NOW, &val);
+		if (!ret) {
+			if (pdpm->cp.vbus_pres)
+				pdpm->cp.ibat_curr = -(val / 1000);
+		}
+
+		ret = usbpd_read_iio_prop(pdpm, USBPD_IIO_QG,
+					PD_QG_FASTCHARGE_MODE, &val);
+		if (!ret) {
+			if (val)
+				pm_config.bat_volt_lp_lmt =
+					pdpm->ffc_bat_volt_max;
+		}
 	}
 
-	ret = pd_pl_get_psy_iio_property(
-		pdpm, PD_PL_PSY_IIO_BQ_FASTCHARGE_MODE, &val);
-	if (!ret) {
-		if (val)
-			pm_config.bat_volt_lp_lmt =
-				pdpm->ffc_bat_volt_max;
-	}
-
-	ret = pd_pl_get_psy_iio_property(
-		pdpm, PD_PL_PSY_IIO_BQ_CHARGING_ENABLED, &val);
+	ret = usbpd_read_iio_prop(pdpm, USBPD_IIO_TI,
+				PD_TI_CHARGING_ENABLED, &val);
 	if (!ret)
 		pdpm->cp.charge_enabled = val;
 
-	ret = pd_pl_get_psy_iio_property(
-		pdpm, PD_PL_PSY_IIO_BQ_ALARM_STATUS, &val);
+	ret = usbpd_read_iio_prop(pdpm, USBPD_IIO_TI,
+				PD_TI_ALARM_STATUS, &val);
 	if (!ret) {
 		pdpm->cp.bat_ovp_alarm = !!(val & BAT_OVP_ALARM_MASK);
 		pdpm->cp.bat_ocp_alarm = !!(val & BAT_OCP_ALARM_MASK);
@@ -524,8 +635,8 @@ static void usbpd_pm_update_cp_status(struct usbpd_pm *pdpm)
 			!!(val & DIE_THERM_ALARM_MASK);
 	}
 
-	ret = pd_pl_get_psy_iio_property(
-		pdpm, PD_PL_PSY_IIO_BQ_FAULT_STATUS, &val);
+	ret = usbpd_read_iio_prop(pdpm, USBPD_IIO_TI,
+				PD_TI_FAULT_STATUS, &val);
 	if (!ret) {
 		pdpm->cp.bat_ovp_fault = !!(val & BAT_OVP_FAULT_MASK);
 		pdpm->cp.bat_ocp_fault = !!(val & BAT_OCP_FAULT_MASK);
@@ -539,8 +650,8 @@ static void usbpd_pm_update_cp_status(struct usbpd_pm *pdpm)
 			!!(val & DIE_THERM_FAULT_MASK);
 	}
 
-	ret = pd_pl_get_psy_iio_property(pdpm,
-					PD_PL_PSY_IIO_BQ_REG_STATUS, &val);
+	ret = usbpd_read_iio_prop(pdpm, USBPD_IIO_TI,
+				PD_TI_REG_STATUS, &val);
 	if (!ret) {
 		pdpm->cp.vbat_reg = !!(val & VBAT_REG_STATUS_MASK);
 		pdpm->cp.ibat_reg = !!(val & IBAT_REG_STATUS_MASK);
@@ -554,16 +665,16 @@ static void usbpd_pm_update_cp_sec_status(struct usbpd_pm *pdpm)
 	if (!pm_config.cp_sec_enable)
 		return;
 
-	if (!is_pd_pl_ext_iio_available(pdpm))
+	if (!is_usbpd_iio_available(pdpm, USBPD_IIO_TI))
 		return;
 
-	ret = pd_pl_get_psy_iio_property(pdpm,
-					PD_PL_PSY_IIO_BQ_BUS_CURRENT, &val);
+	ret = usbpd_read_iio_prop(pdpm, USBPD_IIO_TI,
+				PD_TI_BUS_CURRENT, &val);
 	if (!ret)
 		pdpm->cp_sec.ibus_curr = val;
 
-	ret = pd_pl_get_psy_iio_property(
-		pdpm, PD_PL_PSY_IIO_BQ_CHARGING_ENABLED, &val);
+	ret = usbpd_read_iio_prop(pdpm, USBPD_IIO_TI,
+				PD_TI_CHARGING_ENABLED, &val);
 	if (!ret)
 		pdpm->cp_sec.charge_enabled = val;
 }
@@ -572,12 +683,12 @@ static int usbpd_pm_enable_cp(struct usbpd_pm *pdpm, bool enable)
 {
 	int ret, val = 0;
 
-	if (!is_pd_pl_ext_iio_available(pdpm))
+	if (!is_usbpd_iio_available(pdpm, USBPD_IIO_TI))
 		return -ENODEV;
 
 	val = enable;
-	ret = pd_pl_set_psy_iio_property(
-		pdpm, PD_PL_PSY_IIO_BQ_CHARGING_ENABLED, val);
+	ret = usbpd_write_iio_prop(pdpm, USBPD_IIO_TI,
+				PD_TI_CHARGING_ENABLED, val);
 
 	return ret;
 }
@@ -586,12 +697,12 @@ static int usbpd_pm_enable_cp_sec(struct usbpd_pm *pdpm, bool enable)
 {
 	int ret, val = 0;
 
-	if (!is_pd_pl_ext_iio_available(pdpm))
+	if (!is_usbpd_iio_available(pdpm, USBPD_IIO_TI))
 		return -ENODEV;
 
 	val = enable;
-	ret = pd_pl_get_psy_iio_property(
-		pdpm, PD_PL_PSY_IIO_BQ_CHARGING_ENABLED, &val);
+	ret = usbpd_write_iio_prop(pdpm, USBPD_IIO_TI,
+				PD_TI_CHARGING_ENABLED, val);
 
 	return ret;
 }
@@ -600,11 +711,11 @@ static int usbpd_pm_check_cp_enabled(struct usbpd_pm *pdpm)
 {
 	int ret, val = 0;
 
-	if (!is_pd_pl_ext_iio_available(pdpm))
+	if (!is_usbpd_iio_available(pdpm, USBPD_IIO_TI))
 		return -ENODEV;
 
-	ret = pd_pl_get_psy_iio_property(
-		pdpm, PD_PL_PSY_IIO_BQ_CHARGING_ENABLED, &val);
+	ret = usbpd_read_iio_prop(pdpm, USBPD_IIO_TI,
+				PD_TI_CHARGING_ENABLED, &val);
 	if (!ret)
 		pdpm->cp.charge_enabled = !!val;
 
@@ -617,11 +728,11 @@ static int usbpd_pm_check_cp_sec_enabled(struct usbpd_pm *pdpm)
 {
 	int ret, val = 0;
 
-	if (!is_pd_pl_ext_iio_available(pdpm))
+	if (!is_usbpd_iio_available(pdpm, USBPD_IIO_TI))
 		return -ENODEV;
 
-	ret = pd_pl_get_psy_iio_property(
-		pdpm, PD_PL_PSY_IIO_BQ_CHARGING_ENABLED, &val);
+	ret = usbpd_read_iio_prop(pdpm, USBPD_IIO_TI,
+				PD_TI_CHARGING_ENABLED, &val);
 	if (!ret)
 		pdpm->cp_sec.charge_enabled = !!val;
 	pr_info("pdpm->cp_sec.charge_enabled:%d\n",
@@ -633,12 +744,12 @@ static int usbpd_pm_enable_sw(struct usbpd_pm *pdpm, bool enable)
 {
 	int ret, val = 0;
 
-	if (!is_pd_pl_ext_iio_available(pdpm))
+	if (!is_usbpd_iio_available(pdpm, USBPD_IIO_MAIN))
 		return -ENODEV;
 
 	val = enable;
-	ret = pd_pl_set_psy_iio_property(
-		pdpm, PD_PL_PSY_IIO_BQ_BATTERY_CHARGING_ENABLED, val);
+	ret = usbpd_write_iio_prop(pdpm, USBPD_IIO_MAIN,
+				PD_MAIN_BATTERY_CHARGING_ENABLED, val);
 
 	return ret;
 }
@@ -647,11 +758,11 @@ static int usbpd_pm_check_slowly_charging_enabled(struct usbpd_pm *pdpm)
 {
 	int ret, val = 0;
 
-	if (!is_pd_pl_ext_iio_available(pdpm))
+	if (!is_usbpd_iio_available(pdpm, USBPD_IIO_MAIN))
 		return -ENODEV;
 
-	ret = pd_pl_get_psy_iio_property(
-		pdpm, PD_PL_PSY_IIO_BQ_SLOWLY_CHARGING, &val);
+	ret = usbpd_read_iio_prop(pdpm, USBPD_IIO_MAIN,
+				PD_MAIN_SLOWLY_CHARGING, &val);
 	if (!ret)
 		pdpm->sw.slowly_charging = !!val;
 
@@ -662,12 +773,12 @@ static int usbpd_pm_limit_sw(struct usbpd_pm *pdpm, bool enable)
 {
 	int ret, val = 0;
 
-	if (!is_pd_pl_ext_iio_available(pdpm))
+	if (!is_usbpd_iio_available(pdpm, USBPD_IIO_MAIN))
 		return -ENODEV;
 
 	val = enable;
-	ret = pd_pl_set_psy_iio_property(
-		pdpm, PD_PL_PSY_IIO_BQ_BATTERY_CHARGING_LIMITED, val);
+	ret = usbpd_write_iio_prop(pdpm, USBPD_IIO_MAIN,
+				PD_MAIN_BATTERY_CHARGING_LIMITED, val);
 
 	return ret;
 }
@@ -676,11 +787,11 @@ static int usbpd_pm_check_sw_limited(struct usbpd_pm *pdpm)
 {
 	int ret, val = 0;
 
-	if (!is_pd_pl_ext_iio_available(pdpm))
+	if (!is_usbpd_iio_available(pdpm, USBPD_IIO_MAIN))
 		return -ENODEV;
 
-	ret = pd_pl_get_psy_iio_property(
-		pdpm, PD_PL_PSY_IIO_BQ_BATTERY_CHARGING_LIMITED, &val);
+	ret = usbpd_read_iio_prop(pdpm, USBPD_IIO_MAIN,
+				PD_MAIN_BATTERY_CHARGING_LIMITED, &val);
 	if (!ret)
 		pdpm->sw.charge_limited = !!val;
 
@@ -691,11 +802,11 @@ static int usbpd_pm_check_sw_enabled(struct usbpd_pm *pdpm)
 {
 	int ret, val = 0;
 
-	if (!is_pd_pl_ext_iio_available(pdpm))
+	if (!is_usbpd_iio_available(pdpm, USBPD_IIO_MAIN))
 		return -ENODEV;
 
-	ret = pd_pl_get_psy_iio_property(
-		pdpm, PD_PL_PSY_IIO_BQ_BATTERY_CHARGING_ENABLED, &val);
+	ret = usbpd_read_iio_prop(pdpm, USBPD_IIO_MAIN,
+				PD_MAIN_BATTERY_CHARGING_ENABLED, &val);
 	if (!ret)
 		pdpm->sw.charge_enabled = !!val;
 
@@ -751,8 +862,8 @@ static void usbpd_pm_evaluate_src_caps(struct usbpd_pm *pdpm)
 			pdpm->apdo_max_curr = XIAOMI_LOW_POWER_PPS_CURR_MAX;
 		val = (pdpm->apdo_max_volt / 1000) *
 			      (pdpm->apdo_max_curr / 1000);
-		pd_pl_set_psy_iio_property(pdpm,
-					  PD_PL_PSY_IIO_APDO_MAX, val);
+		usbpd_write_iio_prop(pdpm, USBPD_IIO_MAIN,
+					  PD_MAIN_APDO_MAX, val);
 	} else {
 		pr_info("Not qualified PPS adapter\n");
 	}
@@ -1211,6 +1322,7 @@ static int usbpd_pm_sm(struct usbpd_pm *pdpm)
 		if (stop_sw &&
 		    (pdpm->sw.charge_enabled || pdpm->sw.charge_limited))
 			usbpd_pm_enable_sw(pdpm, false);
+
 		usbpd_pm_update_sw_status(pdpm);
 
 		if (pdpm->cp.charge_enabled) {
@@ -1281,8 +1393,8 @@ static void usbpd_pm_disconnect(struct usbpd_pm *pdpm)
 	}
 
 	val = 0;
-	pd_pl_set_psy_iio_property(pdpm, PD_PL_PSY_IIO_APDO_MAX,
-				  val);
+	usbpd_write_iio_prop(pdpm, USBPD_IIO_MAIN,
+					PD_MAIN_APDO_MAX, val);
 
 	usbpd_pm_enable_cp(pdpm, false);
 
@@ -1328,10 +1440,11 @@ static void cp_psy_change_work(struct work_struct *work)
 	bool ac_pres = pdpm->cp.vbus_pres;
 	int ret, val = 0;
 
-	if (!is_pd_pl_ext_iio_available(pdpm))
+	if (!is_usbpd_iio_available(pdpm, USBPD_IIO_TI))
 		return;
 
-	ret = pd_pl_get_psy_iio_property(pdpm, PD_PL_PSY_IIO_BQ_VBUS_PRESENT, &val);
+	ret = usbpd_read_iio_prop(pdpm, USBPD_IIO_TI,
+			PD_TI_VBUS_PRESENT, &val);
 	if (!ret)
 		pdpm->cp.vbus_pres = val;
 
@@ -1347,8 +1460,12 @@ static void usb_psy_change_work(struct work_struct *work)
 		container_of(work, struct usbpd_pm, usb_psy_change_work);
 	int ret = 0, val = 0, pd_auth_val = 0;
 
-	ret = pd_pl_get_psy_iio_property(
-		pdpm, PD_PL_PSY_IIO_TYPEC_POWER_ROLE, &val);
+	/* Null def fix in case missingiio*/
+	if (!is_usbpd_iio_available(pdpm, USBPD_IIO_MAIN))
+		goto out;
+
+	ret = usbpd_read_iio_prop(pdpm, USBPD_IIO_MAIN,
+					PD_MAIN_TYPEC_POWER_ROLE, &val);
 	if (ret) {
 		pr_err("Failed to read typec power role\n");
 		goto out;
@@ -1358,15 +1475,15 @@ static void usb_psy_change_work(struct work_struct *work)
 	    val != QTI_POWER_SUPPLY_TYPEC_PR_DUAL)
 		goto out;
 
-	ret = pd_pl_get_psy_iio_property(pdpm,
-					PD_PL_PSY_IIO_PD_ACTIVE, &val);
+	ret = usbpd_read_iio_prop(pdpm, USBPD_IIO_MAIN,
+					PD_MAIN_PD_ACTIVE, &val);
 	if (ret) {
 		pr_err("Failed to get usb pd active state\n");
 		goto out;
 	}
 
-	ret = pd_pl_get_psy_iio_property(pdpm,
-					PD_PL_PSY_IIO_PD_AUTHENTICATION,
+	ret = usbpd_read_iio_prop(pdpm, USBPD_IIO_MAIN,
+					PD_MAIN_PD_AUTHENTICATION,
 					&pd_auth_val);
 	if (ret) {
 		pr_err("Failed to read typec power role\n");
@@ -1476,12 +1593,41 @@ static int pd_policy_parse_dt(struct usbpd_pm *pdpm)
 	return rc;
 }
 
+static void usbpd_pm_iio_init(struct usbpd_pm *pdpm)
+{
+	// struct iio_channel **iio_list;
+	bool ti, main,qg;
+
+	/* init ti iio channels*/
+	ti = is_usbpd_iio_available(pdpm, USBPD_IIO_TI);//better way to handle is this?
+	// iio_list = get_ti_ext_channels(pdpm->dev,
+	// 	usbpd_ext_ti_iio_chan, ARRAY_SIZE(usbpd_ext_ti_iio_chan));
+	// if (!IS_ERR(iio_list))
+	// 	pdpm->iio_chan_list_usbpd_ti = iio_list;
+
+	/* init main charger iio channels*/
+	main = is_usbpd_iio_available(pdpm, USBPD_IIO_MAIN);//better way to handle is this?
+	// iio_list = get_ti_ext_channels(pdpm->dev,
+	// 	usbpd_ext_main_iio_chan, ARRAY_SIZE(usbpd_ext_main_iio_chan));
+	// if (!IS_ERR(iio_list))
+	// 	pdpm->iio_chan_list_usbpd_main = iio_list;
+
+	/* init fg4 iio channels */
+	qg = is_usbpd_iio_available(pdpm, USBPD_IIO_QG);//better way to handle is this?
+	// iio_list = get_ti_ext_channels(pdpm->dev,
+	// 	usbpd_ext_qg_iio_chan, ARRAY_SIZE(usbpd_ext_qg_iio_chan));
+	// if (!IS_ERR(iio_list))
+	// 	pdpm->iio_chan_list_usbpd_qg = iio_list;
+
+	pr_info("usbpd_pm iio probe: ti=%d main=%d qg=%d\n", ti, main, qg);
+}
+
+
 static int usbpd_pm_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct device *dev = &pdev->dev;
 	struct usbpd_pm *pdpm;
-	struct iio_channel **iio_list;
 
 	pr_info("%s enter\n", __func__);
 
@@ -1493,12 +1639,6 @@ static int usbpd_pm_probe(struct platform_device *pdev)
 
 	pdpm->dev = dev;
 
-	/* main ext IIO channels */
-	iio_list = get_bq_ext_channels(pdpm->dev,
-		pd_pl_ext_iio_channels, ARRAY_SIZE(pd_pl_ext_iio_channels));
-	if (!IS_ERR(iio_list))
-		pdpm->ext_main_iio_channels = iio_list;
-
 	ret = pd_policy_parse_dt(pdpm);
 	if (ret < 0) {
 		pr_err("Couldn't parse device tree rc=%d\n", ret);
@@ -1507,6 +1647,9 @@ static int usbpd_pm_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, pdpm);
+
+	/* init external iio channels */
+	usbpd_pm_iio_init(pdpm);
 
 	spin_lock_init(&pdpm->psy_change_lock);
 

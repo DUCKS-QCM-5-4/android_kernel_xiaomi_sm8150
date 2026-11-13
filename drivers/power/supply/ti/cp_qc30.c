@@ -53,7 +53,6 @@
 #include <linux/pmic-voter.h>
 
 #include <linux/iio/consumer.h>
-#include "bq2597x_charger_iio.h"
 
 #include "cp_qc30.h"
 
@@ -117,65 +116,6 @@ static struct sys_config sys_config = {
 	.qc3p5_supported = false,
 };
 
-enum cp_qc3_ext_iio_channels {
-	CP_QC3_PSY_IIO_BQ_BATTERY_VOLTAGE = 0,
-	CP_QC3_PSY_IIO_BQ_BATTERY_CURRENT,
-	CP_QC3_PSY_IIO_BQ_BUS_VOLTAGE,
-	CP_QC3_PSY_IIO_BQ_BUS_CURRENT,
-	CP_QC3_PSY_IIO_BQ_BUS_TEMPERATURE,
-	CP_QC3_PSY_IIO_BQ_BATTERY_TEMPERATURE,
-	CP_QC3_PSY_IIO_BQ_DIE_TEMPERATURE,
-	CP_QC3_PSY_IIO_BQ_BATTERY_PRESENT,
-	CP_QC3_PSY_IIO_BQ_VBUS_PRESENT,
-	CP_QC3_PSY_IIO_BQ_BUS_ERROR_STATUS,
-	CP_QC3_PSY_IIO_BQ_ALARM_STATUS,
-	CP_QC3_PSY_IIO_BQ_FAULT_STATUS,
-	CP_QC3_PSY_IIO_BQ_REG_STATUS,
-	CP_QC3_PSY_IIO_BQ_SET_BUS_PROTECTION_FOR_QC3,
-	CP_QC3_PSY_IIO_BQ_FASTCHARGE_MODE,
-	CP_QC3_PSY_IIO_BQ_CHARGING_ENABLED,
-	CP_QC3_PSY_IIO_BQ_BATTERY_CHARGING_LIMITED,
-	CP_QC3_PSY_IIO_BQ_BATTERY_CHARGING_ENABLED,
-	CP_QC3_PSY_IIO_BQ_DP_DM_BQ,
-	CP_QC3_PSY_IIO_BQ_INPUT_SUSPEND,
-	CP_QC3_PSY_IIO_BQ_SLOWLY_CHARGING,
-	CP_QC3_PSY_IIO_BQ_HVDCP3_TYPE,
-	CP_QC3_PSY_IIO_USB_REAL_TYPE,
-	CP_QC3_PSY_IIO_TEMP,
-	CP_QC3_PSY_IIO_CURRENT_NOW,
-	CP_QC3_PSY_IIO_CAPACITY,
-};
-
-static const char * const cp_qc3_ext_iio_chan[] = {
-	[CP_QC3_PSY_IIO_BQ_BATTERY_VOLTAGE] = "battery_voltage",
-	[CP_QC3_PSY_IIO_BQ_BATTERY_CURRENT] = "battery_current",
-	[CP_QC3_PSY_IIO_BQ_BUS_VOLTAGE]	= "bus_voltage",
-	[CP_QC3_PSY_IIO_BQ_BUS_CURRENT] = "bus_current",
-	[CP_QC3_PSY_IIO_BQ_BUS_TEMPERATURE] = "bus_temp",
-	[CP_QC3_PSY_IIO_BQ_BATTERY_TEMPERATURE] = "battery_temp",
-	[CP_QC3_PSY_IIO_BQ_DIE_TEMPERATURE] = "die_temp",
-	[CP_QC3_PSY_IIO_BQ_BATTERY_PRESENT] = "battery_preset",
-	[CP_QC3_PSY_IIO_BQ_VBUS_PRESENT] = "vbus_present",
-	[CP_QC3_PSY_IIO_BQ_BUS_ERROR_STATUS] = "bus_error_status",
-	[CP_QC3_PSY_IIO_BQ_ALARM_STATUS] = "alarm_status",
-	[CP_QC3_PSY_IIO_BQ_FAULT_STATUS] = "fault_status",
-	[CP_QC3_PSY_IIO_BQ_REG_STATUS] = "reg_status",
-	[CP_QC3_PSY_IIO_BQ_SET_BUS_PROTECTION_FOR_QC3] = "bus_protection_qc3",
-	[CP_QC3_PSY_IIO_BQ_FASTCHARGE_MODE] = "bq_fastcharge_mode",
-	[CP_QC3_PSY_IIO_BQ_CHARGING_ENABLED] = "charging_enabled",
-	[CP_QC3_PSY_IIO_BQ_BATTERY_CHARGING_LIMITED] = "bat_charging_limit",
-	[CP_QC3_PSY_IIO_BQ_BATTERY_CHARGING_ENABLED] = "bat_charging_enabled",
-	[CP_QC3_PSY_IIO_BQ_DP_DM_BQ] = "dp_dm_bq",
-	[CP_QC3_PSY_IIO_BQ_INPUT_SUSPEND] = "bq_input_suspend",
-	[CP_QC3_PSY_IIO_BQ_SLOWLY_CHARGING] = "slowly_charging",
-	[CP_QC3_PSY_IIO_BQ_HVDCP3_TYPE] = "hvdcp3_type",
-	[CP_QC3_PSY_IIO_USB_REAL_TYPE] = "real_type",
-	/* QG IIO Channels*/
-	[CP_QC3_PSY_IIO_TEMP]	= "temp",
-	[CP_QC3_PSY_IIO_CURRENT_NOW]	= "current_now",
-	[CP_QC3_PSY_IIO_CAPACITY] = "capacity",
-};
-
 struct cp_qc30_data {
 	struct device *dev;
 	int bat_volt_max;
@@ -189,8 +129,12 @@ struct cp_qc30_data {
 	/* notifiers */
 	struct notifier_block nb;
 
-	/* IIO channels */
-	struct iio_channel	**iio_chan_list_cp_cq3;
+	/* TI IIO channels */
+	struct iio_channel	**iio_chan_list_cp_ti;
+	/* Main IIO channels */
+	struct iio_channel	**iio_chan_list_cp_main;
+	/* QG IIO channels */
+	struct iio_channel	**iio_chan_list_cp_qg;
 };
 
 static pm_t pm_state;
@@ -200,57 +144,222 @@ static struct cp_qc30_data *the_chip;
 static int fc2_taper_timer;
 static int ibus_lmt_change_timer;
 
-static int cp_qc3_get_psy_iio_property(struct cp_qc30_data *chip,
-						int iio_chan, int *val)
+/* IIO Config start */
+enum cp_qc30_ext_iio_type {
+	CP_IIO_TI,
+	CP_IIO_MAIN,
+	CP_IIO_QG,
+};
+
+enum cp_qc30_ext_ti_iio_channels {
+	CP_TI_BATTERY_VOLTAGE = 0,
+	CP_TI_BATTERY_CURRENT,
+	CP_TI_BUS_VOLTAGE,
+	CP_TI_BUS_CURRENT,
+	CP_TI_BUS_TEMPERATURE,
+	CP_TI_BATTERY_TEMPERATURE,
+	CP_TI_DIE_TEMPERATURE,
+	CP_TI_BATTERY_PRESENT,
+	CP_TI_VBUS_PRESENT,
+	CP_TI_BUS_ERROR_STATUS,
+	CP_TI_CHARGING_ENABLED,
+	CP_TI_ALARM_STATUS,
+	CP_TI_FAULT_STATUS,
+	CP_TI_REG_STATUS,
+	CP_TI_SET_BUS_PROTECTION_FOR_QC3,
+};
+
+static const char * const cp_qc30_ext_ti_iio_chan[] = {
+	/* TI IIO Channels */
+	[CP_TI_BATTERY_VOLTAGE] = "battery_voltage",
+	[CP_TI_BATTERY_CURRENT] = "battery_current",
+	[CP_TI_BUS_VOLTAGE]	= "bus_voltage",
+	[CP_TI_BUS_CURRENT] = "bus_current",
+	[CP_TI_BUS_TEMPERATURE] = "bus_temp",
+	[CP_TI_BATTERY_TEMPERATURE] = "battery_temp",
+	[CP_TI_DIE_TEMPERATURE] = "die_temp",
+	[CP_TI_BATTERY_PRESENT] = "battery_preset",
+	[CP_TI_VBUS_PRESENT] = "vbus_present",
+	[CP_TI_BUS_ERROR_STATUS] = "bus_error_status",
+	[CP_TI_CHARGING_ENABLED] = "charging_enabled",
+	[CP_TI_ALARM_STATUS] = "alarm_status",
+	[CP_TI_FAULT_STATUS] = "fault_status",
+	[CP_TI_REG_STATUS] = "reg_status",
+	[CP_TI_SET_BUS_PROTECTION_FOR_QC3] = "bus_protection_qc3",
+};
+
+enum cp_qc30_ext_main_iio_channels {
+	CP_MAIN_USB_REAL_TYPE = 0,
+	CP_MAIN_BATTERY_CHARGING_LIMITED,
+	CP_MAIN_BATTERY_CHARGING_ENABLED,
+	CP_MAIN_TI_DP_DM,
+	CP_MAIN_INPUT_SUSPEND,
+	CP_MAIN_SLOWLY_CHARGING,
+	CP_MAIN_HVDCP3_TYPE,
+};
+
+static const char * const cp_qc30_ext_main_iio_chan[] = {
+	/* Main IIO Channels*/
+	[CP_MAIN_USB_REAL_TYPE] = "real_type",
+	[CP_MAIN_BATTERY_CHARGING_LIMITED] = "bat_charging_limit",
+	[CP_MAIN_BATTERY_CHARGING_ENABLED] = "bat_charging_enabled",
+	[CP_MAIN_TI_DP_DM] = "dp_dm_bq",
+	[CP_MAIN_INPUT_SUSPEND] = "bq_input_suspend",
+	[CP_MAIN_SLOWLY_CHARGING] = "slowly_charging",
+	[CP_MAIN_HVDCP3_TYPE] = "hvdcp3_type",
+};
+
+enum cp_qc30_ext_qg_iio_channels {
+	CP_QG_TEMP = 0,
+	CP_QG_CURRENT_NOW,
+	CP_QG_CAPACITY,
+	CP_QG_FASTCHARGE_MODE,
+};
+
+static const char * const cp_qc30_ext_qg_iio_chan[] = {
+	/* QG IIO Channels*/
+	[CP_QG_TEMP]	= "temp",
+	[CP_QG_CURRENT_NOW]	= "current_now",
+	[CP_QG_CAPACITY] = "capacity",
+	[CP_QG_FASTCHARGE_MODE] = "bq_fastcharge_mode",
+};
+
+static int cp_qc30_read_iio_prop(struct cp_qc30_data *chip,
+		enum cp_qc30_ext_iio_type type, int iio_chan,
+		int *val)
 {
 	struct iio_channel *iio_chan_list;
 	int rc;
 
-	if (IS_ERR_OR_NULL(chip->iio_chan_list_cp_cq3))
-		return -ENODEV;
-	iio_chan_list = chip->iio_chan_list_cp_cq3[iio_chan];
+	switch (type) {
+	case CP_IIO_TI:
+		if (IS_ERR_OR_NULL(chip->iio_chan_list_cp_ti))
+			return -ENODEV;
+		iio_chan_list = chip->iio_chan_list_cp_ti[iio_chan];
+		break;
+	case CP_IIO_MAIN:
+		if (IS_ERR_OR_NULL(chip->iio_chan_list_cp_main))
+			return -ENODEV;
+		iio_chan_list = chip->iio_chan_list_cp_main[iio_chan];
+		break;
+	case CP_IIO_QG:
+		if (IS_ERR_OR_NULL(chip->iio_chan_list_cp_qg))
+			return -ENODEV;
+		iio_chan_list = chip->iio_chan_list_cp_qg[iio_chan];
+		break;
+	default:
+		pr_err_ratelimited("cp_qc30: iio_type %d is not supported\n", type);
+		return -EINVAL;
+	}
 
 	rc = iio_read_channel_processed(iio_chan_list, val);
-	return rc < 0 ? rc : 0;
+	return (rc < 0) ? rc : 0;
 }
 
-static int cp_qc3_set_psy_iio_property(struct cp_qc30_data *chip,
-					int iio_chan, int val)
+static int cp_qc30_write_iio_prop(struct cp_qc30_data *chip,
+		enum cp_qc30_ext_iio_type type, int iio_chan,
+		int val)
 {
 	struct iio_channel *iio_chan_list;
 
-	if (IS_ERR_OR_NULL(chip->iio_chan_list_cp_cq3))
-		return -ENODEV;
-	iio_chan_list = chip->iio_chan_list_cp_cq3[iio_chan];
+	switch (type) {
+	case CP_IIO_TI:
+		if (IS_ERR_OR_NULL(chip->iio_chan_list_cp_ti))
+			return -ENODEV;
+		iio_chan_list = chip->iio_chan_list_cp_ti[iio_chan];
+		break;
+	case CP_IIO_MAIN:
+		if (IS_ERR_OR_NULL(chip->iio_chan_list_cp_main))
+			return -ENODEV;
+		iio_chan_list = chip->iio_chan_list_cp_main[iio_chan];
+		break;
+	case CP_IIO_QG:
+		if (IS_ERR_OR_NULL(chip->iio_chan_list_cp_qg))
+			return -ENODEV;
+		iio_chan_list = chip->iio_chan_list_cp_qg[iio_chan];
+		break;
+	default:
+		pr_err_ratelimited("cp_qc30: iio_type %d is not supported\n", type);
+		return -EINVAL;
+	}
 
 	return iio_write_channel_raw(iio_chan_list, val);
 }
 
-static bool is_qc3_iio_available(struct cp_qc30_data *chip)
+static bool is_qc30_iio_available(struct cp_qc30_data *chip,
+		enum cp_qc30_ext_iio_type type)
 {
 	int rc;
 	struct iio_channel **iio_list;
 
-	if (IS_ERR(chip->iio_chan_list_cp_cq3))
-		return false;
-
-	if (!chip->iio_chan_list_cp_cq3) {
-		iio_list = get_bq_ext_channels(chip->dev,
-			cp_qc3_ext_iio_chan,
-			ARRAY_SIZE(cp_qc3_ext_iio_chan));
-		if (IS_ERR(iio_list)) {
-			rc = PTR_ERR(iio_list);
-			if (rc != -EPROBE_DEFER) {
-				dev_err(chip->dev, "Failed to get channels, rc=%d\n",
-						rc);
-				chip->iio_chan_list_cp_cq3 = ERR_PTR(-EINVAL);
-			}
+	switch (type) {
+	case CP_IIO_TI:
+		if (IS_ERR(chip->iio_chan_list_cp_ti))
 			return false;
+
+		if (!chip->iio_chan_list_cp_ti) {
+			iio_list = get_ti_ext_channels(chip->dev,
+					cp_qc30_ext_ti_iio_chan,
+					ARRAY_SIZE(cp_qc30_ext_ti_iio_chan));
+			if (IS_ERR(iio_list)) {
+				rc = PTR_ERR(iio_list);
+				if (rc != -EPROBE_DEFER) {
+					dev_err(chip->dev,
+						"Failed to get CP_IIO_TI channels, rc=%d\n", rc);
+					chip->iio_chan_list_cp_ti = ERR_PTR(-EINVAL);
+				}
+				return false;
+			}
+			chip->iio_chan_list_cp_ti = iio_list;
 		}
-		chip->iio_chan_list_cp_cq3 = iio_list;
+		break;
+	case CP_IIO_MAIN:
+		if (IS_ERR(chip->iio_chan_list_cp_main))
+			return false;
+
+		if (!chip->iio_chan_list_cp_main) {
+			iio_list = get_ti_ext_channels(chip->dev,
+					cp_qc30_ext_main_iio_chan,
+					ARRAY_SIZE(cp_qc30_ext_main_iio_chan));
+			if (IS_ERR(iio_list)) {
+				rc = PTR_ERR(iio_list);
+				if (rc != -EPROBE_DEFER) {
+					dev_err(chip->dev,
+						"Failed to get CP_IIO_MAIN channels, rc=%d\n", rc);
+					chip->iio_chan_list_cp_main = ERR_PTR(-EINVAL);
+				}
+				return false;
+			}
+			chip->iio_chan_list_cp_main = iio_list;
+		}
+		break;
+	case CP_IIO_QG:
+		if (IS_ERR(chip->iio_chan_list_cp_qg))
+			return false;
+
+		if (!chip->iio_chan_list_cp_qg) {
+			iio_list = get_ti_ext_channels(chip->dev,
+					cp_qc30_ext_qg_iio_chan,
+					ARRAY_SIZE(cp_qc30_ext_qg_iio_chan));
+			if (IS_ERR(iio_list)) {
+				rc = PTR_ERR(iio_list);
+				if (rc != -EPROBE_DEFER) {
+					dev_err(chip->dev,
+						"Failed to get CP_IIO_QG channels, rc=%d\n", rc);
+					chip->iio_chan_list_cp_qg = ERR_PTR(-EINVAL);
+				}
+				return false;
+			}
+			chip->iio_chan_list_cp_qg = iio_list;
+		}
+		break;
+	default:
+		pr_err_ratelimited("cp_qc30: iio_type %d is not supported\n", type);
+		return false;
 	}
 	return true;
 }
+/* IIO Config end */
 
 static struct power_supply *cp_get_sw_psy(void)
 {
@@ -288,10 +397,10 @@ static void cp_update_bms_ibat(void)
 {
 	int ret, val = 0;
 
-	if (!is_qc3_iio_available(the_chip))
+	if (!is_qc30_iio_available(the_chip, CP_IIO_QG))
 		return;
 
-	ret = cp_qc3_get_psy_iio_property(the_chip, CP_QC3_PSY_IIO_CURRENT_NOW,
+	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_QG, CP_QG_CURRENT_NOW,
 					&val);
 	if (!ret)
 		pm_state.ibat_now = -(val / 1000);
@@ -301,11 +410,11 @@ static int qc3_get_bms_fastcharge_mode(void)
 {
 	int rc, val = 0;
 
-	if (!is_qc3_iio_available(the_chip))
+	if (!is_qc30_iio_available(the_chip, CP_IIO_QG))
 		return 0;
 
-	rc = cp_qc3_get_psy_iio_property(
-		the_chip, CP_QC3_PSY_IIO_BQ_FASTCHARGE_MODE, &val);
+	rc = cp_qc30_read_iio_prop(
+		the_chip, CP_IIO_QG, CP_QG_FASTCHARGE_MODE, &val);
 	if (rc < 0) {
 		pr_info("Couldn't get fastcharge mode:%d\n", rc);
 		return 0;
@@ -319,7 +428,7 @@ static int qc3_get_bms_fastcharge_mode(void)
 /* get thermal level from battery power supply property */
 static int qc3_get_batt_current_thermal_level(int *level)
 {
-	int ret, rc = 0;
+	int rc = 0;
 	struct power_supply *psy;
 	union power_supply_propval val = {
 		0,
@@ -329,7 +438,7 @@ static int qc3_get_batt_current_thermal_level(int *level)
 	if (!psy)
 		return 0;
 
-	ret = power_supply_get_property(
+	rc = power_supply_get_property(
 		psy, POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT, &val);
 
 	if (rc < 0) {
@@ -349,15 +458,20 @@ static bool qc3_disable_cp_by_jeita_status(void)
 	int batt_temp = 0, bq_input_suspend = 0, val = 0;
 	int ret;
 
-	if (!is_qc3_iio_available(the_chip))
+	if (!is_qc30_iio_available(the_chip, CP_IIO_MAIN))
 		return false;
 
-	ret = cp_qc3_get_psy_iio_property(the_chip, CP_QC3_PSY_IIO_BQ_INPUT_SUSPEND,
+	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_MAIN, CP_MAIN_INPUT_SUSPEND,
 					&val);
 	if (!ret)
 		bq_input_suspend = !!val;
 
-	ret = cp_qc3_get_psy_iio_property(the_chip, CP_QC3_PSY_IIO_TEMP, &val);
+	pr_err("bq_input_suspend: %d\n", bq_input_suspend);
+
+	if (!is_qc30_iio_available(the_chip, CP_IIO_QG))
+		return false;
+
+	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_QG, CP_QG_TEMP, &val);
 	if (ret < 0) {
 		pr_info("Couldn't get batt temp prop:%d\n", ret);
 		return false;
@@ -392,10 +506,10 @@ static int qc3_check_slowly_charging_enabled(void)
 {
 	int ret, val = 0;
 
-	if (!is_qc3_iio_available(the_chip))
+	if (!is_qc30_iio_available(the_chip, CP_IIO_MAIN))
 		return false;
 
-	ret = cp_qc3_get_psy_iio_property(the_chip, CP_QC3_PSY_IIO_BQ_SLOWLY_CHARGING,
+	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_MAIN, CP_MAIN_SLOWLY_CHARGING,
 					&val);
 	if (!ret)
 		pm_state.slowly_charging = !!val;
@@ -407,10 +521,10 @@ static void cp_get_batt_capacity(void)
 {
 	int ret, val = 0;
 
-	if (!is_qc3_iio_available(the_chip))
+	if (!is_qc30_iio_available(the_chip, CP_IIO_QG))
 		return;
 
-	ret = cp_qc3_get_psy_iio_property(the_chip, CP_QC3_PSY_IIO_CAPACITY, &val);
+	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_QG, CP_QG_CAPACITY, &val);
 	if (!ret)
 		pm_state.capacity = val;
 	pr_info("capacity %d\n", pm_state.capacity);
@@ -420,55 +534,55 @@ static void cp_update_fc_status(void)
 {
 	int ret, val = 0;
 
-	if (!is_qc3_iio_available(the_chip))
+	if (!is_qc30_iio_available(the_chip, CP_IIO_TI))
 		return;
 
-	ret = cp_qc3_get_psy_iio_property(
-		the_chip, CP_QC3_PSY_IIO_BQ_BATTERY_VOLTAGE, &val);
+	ret = cp_qc30_read_iio_prop(
+		the_chip, CP_IIO_TI, CP_TI_BATTERY_VOLTAGE, &val);
 	if (!ret)
 		pm_state.bq2597x.vbat_volt = val;
 
-	/*ret = cp_qc3_get_psy_iio_property(the_chip, CP_QC3_PSY_IIO_BQ_BATTERY_CURRENT, &val);
+	/*ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, CP_TI_BATTERY_CURRENT, &val);
 	if (!ret)
 		pm_state.bq2597x.ibat_curr = val; */
 
-	ret = cp_qc3_get_psy_iio_property(the_chip, CP_QC3_PSY_IIO_BQ_BUS_VOLTAGE,
+	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, CP_TI_BUS_VOLTAGE,
 					&val);
 	if (!ret)
 		pm_state.bq2597x.vbus_volt = val;
 
-	ret = cp_qc3_get_psy_iio_property(the_chip, CP_QC3_PSY_IIO_BQ_BUS_CURRENT,
+	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, CP_TI_BUS_CURRENT,
 					&val);
 	if (!ret)
 		pm_state.bq2597x.ibus_curr = val;
 
-	ret = cp_qc3_get_psy_iio_property(
-		the_chip, CP_QC3_PSY_IIO_BQ_BUS_TEMPERATURE, &val);
+	ret = cp_qc30_read_iio_prop(
+		the_chip, CP_IIO_TI, CP_TI_BUS_TEMPERATURE, &val);
 	if (!ret)
 		pm_state.bq2597x.bus_temp = val;
 
-	ret = cp_qc3_get_psy_iio_property(
-		the_chip, CP_QC3_PSY_IIO_BQ_BATTERY_TEMPERATURE, &val);
+	ret = cp_qc30_read_iio_prop(
+		the_chip, CP_IIO_TI, CP_TI_BATTERY_TEMPERATURE, &val);
 	if (!ret)
 		pm_state.bq2597x.bat_temp = val;
 
-	ret = cp_qc3_get_psy_iio_property(
-		the_chip, CP_QC3_PSY_IIO_BQ_DIE_TEMPERATURE, &val);
+	ret = cp_qc30_read_iio_prop(
+		the_chip, CP_IIO_TI, CP_TI_DIE_TEMPERATURE, &val);
 	if (!ret)
 		pm_state.bq2597x.die_temp = val;
 
-	ret = cp_qc3_get_psy_iio_property(
-		the_chip, CP_QC3_PSY_IIO_BQ_BATTERY_PRESENT, &val);
+	ret = cp_qc30_read_iio_prop(
+		the_chip, CP_IIO_TI, CP_TI_BATTERY_PRESENT, &val);
 	if (!ret)
 		pm_state.bq2597x.batt_pres = val;
 
-	ret = cp_qc3_get_psy_iio_property(the_chip, CP_QC3_PSY_IIO_BQ_VBUS_PRESENT,
+	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, CP_TI_VBUS_PRESENT,
 					&val);
 	if (!ret)
 		pm_state.bq2597x.vbus_pres = val;
 
-	ret = cp_qc3_get_psy_iio_property(
-		the_chip, CP_QC3_PSY_IIO_BQ_BUS_ERROR_STATUS, &val);
+	ret = cp_qc30_read_iio_prop(
+		the_chip, CP_IIO_TI, CP_TI_BUS_ERROR_STATUS, &val);
 	if (!ret)
 		pm_state.bq2597x.bus_error_status = val;
 
@@ -477,12 +591,12 @@ static void cp_update_fc_status(void)
 		pm_state.bq2597x.ibat_curr = pm_state.ibat_now;
 	}
 
-	ret = cp_qc3_get_psy_iio_property(the_chip, CP_QC3_PSY_IIO_BQ_CHARGING_ENABLED,
+	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, CP_TI_CHARGING_ENABLED,
 					&val);
 	if (!ret)
 		pm_state.bq2597x.charge_enabled = val;
 
-	ret = cp_qc3_get_psy_iio_property(the_chip, CP_QC3_PSY_IIO_BQ_ALARM_STATUS,
+	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, CP_TI_ALARM_STATUS,
 					&val);
 	if (!ret) {
 		pm_state.bq2597x.bat_ovp_alarm =
@@ -503,7 +617,7 @@ static void cp_update_fc_status(void)
 			!!(val & DIE_THERM_ALARM_MASK);
 	}
 
-	ret = cp_qc3_get_psy_iio_property(the_chip, CP_QC3_PSY_IIO_BQ_FAULT_STATUS,
+	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, CP_TI_FAULT_STATUS,
 					&val);
 	if (!ret) {
 		pm_state.bq2597x.bat_ovp_fault =
@@ -522,7 +636,7 @@ static void cp_update_fc_status(void)
 			!!(val & DIE_THERM_FAULT_MASK);
 	}
 
-	ret = cp_qc3_get_psy_iio_property(the_chip, CP_QC3_PSY_IIO_BQ_REG_STATUS,
+	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, CP_TI_REG_STATUS,
 					&val);
 	if (!ret) {
 		pm_state.bq2597x.vbat_reg =
@@ -536,11 +650,11 @@ static int cp_enable_fc(bool enable)
 {
 	int ret, val = 0;
 
-	if (!is_qc3_iio_available(the_chip))
+	if (!is_qc30_iio_available(the_chip, CP_IIO_TI))
 		return -ENODEV;
 
 	val = enable;
-	ret = cp_qc3_set_psy_iio_property(the_chip, CP_QC3_PSY_IIO_BQ_CHARGING_ENABLED,
+	ret = cp_qc30_write_iio_prop(the_chip, CP_IIO_TI, CP_TI_CHARGING_ENABLED,
 					val);
 
 	return ret;
@@ -550,12 +664,12 @@ static int cp_set_qc_bus_protections(int hvdcp3_type)
 {
 	int ret, val = 0;
 
-	if (!is_qc3_iio_available(the_chip))
+	if (!is_qc30_iio_available(the_chip, CP_IIO_TI))
 		return -ENODEV;
 
 	val = hvdcp3_type;
-	ret = cp_qc3_set_psy_iio_property(
-		the_chip, CP_QC3_PSY_IIO_BQ_SET_BUS_PROTECTION_FOR_QC3, val);
+	ret = cp_qc30_write_iio_prop(
+		the_chip, CP_IIO_TI, CP_TI_SET_BUS_PROTECTION_FOR_QC3, val);
 
 	return ret;
 }
@@ -564,12 +678,12 @@ static int cp_enable_sw(bool enable)
 {
 	int ret, val = 0;
 
-	if (!is_qc3_iio_available(the_chip))
+	if (!is_qc30_iio_available(the_chip, CP_IIO_MAIN))
 		return -ENODEV;
 
 	val = enable;
-	ret = cp_qc3_set_psy_iio_property(
-		the_chip, CP_QC3_PSY_IIO_BQ_BATTERY_CHARGING_ENABLED, val);
+	ret = cp_qc30_write_iio_prop(
+		the_chip, CP_IIO_MAIN, CP_MAIN_BATTERY_CHARGING_ENABLED, val);
 
 	return ret;
 }
@@ -578,12 +692,12 @@ static int cp_limit_sw(bool enable)
 {
 	int ret, val = 0;
 
-	if (!is_qc3_iio_available(the_chip))
+	if (!is_qc30_iio_available(the_chip, CP_IIO_MAIN))
 		return -ENODEV;
 
 	val = enable;
-	ret = cp_qc3_set_psy_iio_property(
-		the_chip, CP_QC3_PSY_IIO_BQ_BATTERY_CHARGING_LIMITED, val);
+	ret = cp_qc30_write_iio_prop(
+		the_chip, CP_IIO_MAIN, CP_MAIN_BATTERY_CHARGING_LIMITED, val);
 
 	return ret;
 }
@@ -592,10 +706,10 @@ static int cp_check_fc_enabled(void)
 {
 	int ret, val = 0;
 
-	if (!is_qc3_iio_available(the_chip))
+	if (!is_qc30_iio_available(the_chip, CP_IIO_TI))
 		return -ENODEV;
 
-	ret = cp_qc3_get_psy_iio_property(the_chip, CP_QC3_PSY_IIO_BQ_CHARGING_ENABLED,
+	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, CP_TI_CHARGING_ENABLED,
 					&val);
 	if (!ret)
 		pm_state.bq2597x.charge_enabled = !!val;
@@ -609,11 +723,11 @@ static int cp_check_sw_enabled(void)
 {
 	int ret, val = 0;
 
-	if (!is_qc3_iio_available(the_chip))
+	if (!is_qc30_iio_available(the_chip, CP_IIO_MAIN))
 		return -ENODEV;
 
-	ret = cp_qc3_get_psy_iio_property(
-		the_chip, CP_QC3_PSY_IIO_BQ_BATTERY_CHARGING_ENABLED, &val);
+	ret = cp_qc30_read_iio_prop(
+		the_chip, CP_IIO_MAIN, CP_MAIN_BATTERY_CHARGING_ENABLED, &val);
 	if (!ret)
 		pm_state.sw_chager.charge_enabled = !!val;
 
@@ -626,11 +740,11 @@ static int cp_check_sw_limited(void)
 {
 	int ret, val = 0;
 
-	if (!is_qc3_iio_available(the_chip))
+	if (!is_qc30_iio_available(the_chip, CP_IIO_MAIN))
 		return -ENODEV;
 
-	ret = cp_qc3_get_psy_iio_property(
-		the_chip, CP_QC3_PSY_IIO_BQ_BATTERY_CHARGING_LIMITED, &val);
+	ret = cp_qc30_read_iio_prop(
+		the_chip, CP_IIO_MAIN, CP_MAIN_BATTERY_CHARGING_LIMITED, &val);
 	if (!ret)
 		pm_state.sw_chager.charge_limited = !!val;
 
@@ -649,7 +763,7 @@ static int cp_tune_vbus_volt(bool up)
 {
 	int ret, val = 0;
 
-	if (!is_qc3_iio_available(the_chip))
+	if (!is_qc30_iio_available(the_chip, CP_IIO_MAIN))
 		return -ENODEV;
 
 	if (up)
@@ -657,7 +771,7 @@ static int cp_tune_vbus_volt(bool up)
 	else
 		val = QTI_POWER_SUPPLY_DP_DM_DM_PULSE;
 
-	ret = cp_qc3_set_psy_iio_property(the_chip, CP_QC3_PSY_IIO_BQ_DP_DM_BQ, val);
+	ret = cp_qc30_write_iio_prop(the_chip, CP_IIO_MAIN, CP_MAIN_TI_DP_DM, val);
 
 	pr_info("tune adapter voltage %s %s\n", up ? "up" : "down",
 		ret ? "fail" : "successfully");
@@ -669,10 +783,10 @@ static int cp_get_qc_pulse_cnt(void)
 {
 	int ret = 0, cnt = 0, val = 0;
 
-	if (!is_qc3_iio_available(the_chip))
+	if (!is_qc30_iio_available(the_chip, CP_IIO_MAIN))
 		return -ENODEV;
 
-	ret = cp_qc3_get_psy_iio_property(the_chip, CP_QC3_PSY_IIO_BQ_DP_DM_BQ, &val);
+	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_MAIN, CP_MAIN_TI_DP_DM, &val);
 	if (!ret)
 		cnt = val;
 
@@ -703,11 +817,11 @@ static int cp_reset_vbus_volt(void)
 			}
 		}
 	} else {
-		if (!is_qc3_iio_available(the_chip))
+		if (!is_qc30_iio_available(the_chip, CP_IIO_MAIN))
 			return -ENODEV;
 
 		val = QTI_POWER_SUPPLY_DP_DM_FORCE_5V;
-		ret = cp_qc3_set_psy_iio_property(the_chip, CP_QC3_PSY_IIO_BQ_DP_DM_BQ,
+		ret = cp_qc30_write_iio_prop(the_chip, CP_IIO_MAIN, CP_MAIN_TI_DP_DM,
 						val);
 
 		pr_err("reset vbus volt %s\n", ret ? "fail" : "successfully");
@@ -720,10 +834,10 @@ static int cp_get_usb_type(void)
 {
 	int ret, val = 0;
 
-	if (!is_qc3_iio_available(the_chip))
+	if (!is_qc30_iio_available(the_chip, CP_IIO_MAIN))
 		return -ENODEV;
 
-	ret = cp_qc3_get_psy_iio_property(the_chip, CP_QC3_PSY_IIO_USB_REAL_TYPE, &val);
+	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_MAIN, CP_MAIN_USB_REAL_TYPE, &val);
 	if (!ret)
 		pm_state.usb_type = val;
 
@@ -753,14 +867,14 @@ static int cp_get_qc_hvdcp3_type(void)
 {
 	int ret, val = 0;
 
-	if (!is_qc3_iio_available(the_chip))
+	if (!is_qc30_iio_available(the_chip, CP_IIO_MAIN))
 		return -ENODEV;
 
-	ret = cp_qc3_get_psy_iio_property(the_chip, CP_QC3_PSY_IIO_BQ_HVDCP3_TYPE,
+	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_MAIN, CP_MAIN_HVDCP3_TYPE,
 					&val);
 	if (!ret)
 		pm_state.hvdcp3_type = val;
-	pr_info("hvdcp3 type %s\n", pm_state.hvdcp3_type);
+	pr_info("hvdcp3 type %d\n", pm_state.hvdcp3_type);
 	return ret;
 }
 
@@ -1453,12 +1567,40 @@ static int cp_qc30_parse_dt(struct cp_qc30_data *chip)
 	return rc;
 }
 
+static void cp_qc30_iio_init(struct cp_qc30_data *chip)
+{
+	// struct iio_channel **iio_list;
+	bool ti, main,qg;
+
+	/* init ti iio channels*/
+	ti = is_qc30_iio_available(chip, CP_IIO_TI);//better way to handle is this?
+	// iio_list = get_ti_ext_channels(chip->dev,
+	// 	cp_qc30_ext_ti_iio_chan, ARRAY_SIZE(cp_qc30_ext_ti_iio_chan));
+	// if (!IS_ERR(iio_list))
+	// 	chip->iio_chan_list_cp_ti = iio_list;
+
+	/* init main charger iio channels*/
+	main = is_qc30_iio_available(chip, CP_IIO_MAIN);//better way to handle is this?
+	// iio_list = get_ti_ext_channels(chip->dev,
+	// 	cp_qc30_ext_main_iio_chan, ARRAY_SIZE(cp_qc30_ext_main_iio_chan));
+	// if (!IS_ERR(iio_list))
+	// 	chip->iio_chan_list_cp_main = iio_list;
+
+	/* init fg4 iio channels */
+	qg = is_qc30_iio_available(chip, CP_IIO_QG);//better way to handle is this?
+	// iio_list = get_ti_ext_channels(chip->dev,
+	// 	cp_qc30_ext_qg_iio_chan, ARRAY_SIZE(cp_qc30_ext_qg_iio_chan));
+	// if (!IS_ERR(iio_list))
+	// 	chip->iio_chan_list_cp_qg = iio_list;
+
+	pr_info("cp_qc30_iio_init: ti=%d main=%d qg=%d\n", ti, main, qg);
+}
+
 static int cp_qc30_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct device *dev = &pdev->dev;
 	struct cp_qc30_data *chip;
-	struct iio_channel **iio_list;
 
 	pr_info("%s enter\n", __func__);
 
@@ -1467,12 +1609,6 @@ static int cp_qc30_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	chip->dev = dev;
-	the_chip = chip;
-
-	iio_list = get_bq_ext_channels(chip->dev,
-		cp_qc3_ext_iio_chan, ARRAY_SIZE(cp_qc3_ext_iio_chan));
-	if (!IS_ERR(iio_list))
-		chip->iio_chan_list_cp_cq3 = iio_list;
 
 	ret = cp_qc30_parse_dt(chip);
 	if (ret < 0) {
@@ -1480,7 +1616,11 @@ static int cp_qc30_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	the_chip = chip;
 	platform_set_drvdata(pdev, chip);
+
+	/* init external iio channels */
+	cp_qc30_iio_init(chip);
 
 	pm_state.state = CP_STATE_DISCONNECT;
 	pm_state.usb_type = POWER_SUPPLY_TYPE_UNKNOWN;

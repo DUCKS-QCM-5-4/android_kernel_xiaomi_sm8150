@@ -3,10 +3,9 @@
  * Copyright (c) 2025, Aman <duckyduckg65@gmail.com>
  */
 
-#include "bq2597x_charger.h"
-#include "bq2597x_charger_iio.h"
+#include "ti_charger_iio.h"
 
-struct iio_channel **get_bq_ext_channels(struct device *dev,
+struct iio_channel **get_ti_ext_channels(struct device *dev,
 		 const char *const *channel_map, int size)
 {
 	int i, rc = 0;
