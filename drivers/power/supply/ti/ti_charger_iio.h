@@ -72,6 +72,28 @@ static const struct ti_charger_iio_channels ti_charger_iio_psy_channels[] = {
     TI_CHARGER_CHAN_ACT("ti_charging_enabled", PSY_IIO_TI_CHARGING_ENABLED)
 };
 
-struct iio_channel **get_ti_ext_channels(struct device *dev,
-	const char *const *channel_map, int size);
+static inline struct iio_channel **get_ti_ext_channels(struct device *dev,
+		 const char *const *channel_map, int size)
+{
+	int i, rc = 0;
+	struct iio_channel **iio_ch_ext;
+
+	iio_ch_ext = devm_kcalloc(dev, size, sizeof(*iio_ch_ext), GFP_KERNEL);
+	if (!iio_ch_ext)
+		return ERR_PTR(-ENOMEM);
+
+	for (i = 0; i < size; i++) {
+		iio_ch_ext[i] = devm_iio_channel_get(dev, channel_map[i]);
+
+		if (IS_ERR(iio_ch_ext[i])) {
+			rc = PTR_ERR(iio_ch_ext[i]);
+			if (rc != -EPROBE_DEFER)
+				dev_err(dev, "%s channel unavailable, %d\n",
+						channel_map[i], rc);
+			return ERR_PTR(rc);
+		}
+	}
+
+	return iio_ch_ext;
+}
 #endif
