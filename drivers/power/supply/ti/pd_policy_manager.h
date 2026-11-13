@@ -18,7 +18,7 @@
 #include <linux/usb/usbpd.h>
 
 #include <linux/iio/consumer.h>
-#include "bq2597x_charger_iio.h"
+#include "ti_charger_iio.h"
 
 enum pm_state {
 	PD_PM_STATE_ENTRY,
@@ -212,8 +212,12 @@ struct usbpd_pm {
 	bool jeita_triggered;
 	bool is_temp_out_fc2_range;
 
-	/* IIO channels */
-	struct iio_channel	**ext_main_iio_channels;
+	/* TI IIO channels */
+	struct iio_channel	**iio_chan_list_usbpd_ti;
+	/* Main IIO channels */
+	struct iio_channel	**iio_chan_list_usbpd_main;
+	/* QG IIO channels */
+	struct iio_channel	**iio_chan_list_usbpd_qg;
 };
 
 struct pdpm_config {

@@ -18,7 +18,7 @@
 #include <linux/delay.h>
 #include <linux/power_supply.h>
 
-#include "bq2597x_charger_iio.h"
+#include "ti_charger_iio.h"
 
 /* check_vbus_error */
 enum {
