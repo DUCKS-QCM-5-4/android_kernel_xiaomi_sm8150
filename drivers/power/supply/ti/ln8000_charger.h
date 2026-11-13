@@ -19,6 +19,8 @@
 #ifndef __LN8000_CHARGER_H__
 #define __LN8000_CHARGER_H__
 
+#include "ti_charger_iio.h"
+
 //#define LN8000_DUAL_CONFIG	/* uncomment to enable DUAL chip operation */
 //#define LN8000_DEBUG_SUPPORT
 
@@ -284,6 +286,10 @@ struct ln8000_info {
 	struct i2c_client *client;
 	struct ln8000_platform_data *pdata;
 	struct power_supply *psy_chg;
+
+	struct iio_dev		*indio_dev;
+	struct iio_chan_spec	*iio_chan;
+	struct iio_channel	*int_iio_chans;
 
 	struct mutex data_lock;
 	struct mutex i2c_lock;
