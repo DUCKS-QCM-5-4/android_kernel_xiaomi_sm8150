@@ -291,6 +291,8 @@ struct ln8000_info {
 	struct iio_chan_spec	*iio_chan;
 	struct iio_channel	*int_iio_chans;
 
+	struct ti_charger_iio	ln_main;
+
 	struct mutex data_lock;
 	struct mutex i2c_lock;
 	struct mutex irq_lock;

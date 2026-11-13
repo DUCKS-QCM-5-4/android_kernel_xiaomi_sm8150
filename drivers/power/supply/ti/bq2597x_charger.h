@@ -223,6 +223,8 @@ struct bq2597x {
 	struct iio_chan_spec	*iio_chan;
 	struct iio_channel	*int_iio_chans;
 
+	struct ti_charger_iio bq_main;
+
 	int part_no;
 	int revision;
 

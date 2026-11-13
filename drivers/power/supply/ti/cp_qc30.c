@@ -126,8 +126,6 @@ struct cp_qc30_data {
 	/* notifiers */
 	struct notifier_block nb;
 
-	/* TI IIO channels */
-	struct iio_channel	**iio_chan_list_cp_ti;
 	/* Main IIO channels */
 	struct iio_channel	**iio_chan_list_cp_main;
 	/* QG IIO channels */
@@ -146,43 +144,6 @@ enum cp_qc30_ext_iio_type {
 	CP_IIO_TI,
 	CP_IIO_MAIN,
 	CP_IIO_QG,
-};
-
-enum cp_qc30_ext_ti_iio_channels {
-	CP_TI_BATTERY_VOLTAGE = 0,
-	CP_TI_BATTERY_CURRENT,
-	CP_TI_BUS_VOLTAGE,
-	CP_TI_BUS_CURRENT,
-	CP_TI_BUS_TEMPERATURE,
-	CP_TI_BATTERY_TEMPERATURE,
-	CP_TI_DIE_TEMPERATURE,
-	CP_TI_BATTERY_PRESENT,
-	CP_TI_VBUS_PRESENT,
-	CP_TI_BUS_ERROR_STATUS,
-	CP_TI_CHARGING_ENABLED,
-	CP_TI_ALARM_STATUS,
-	CP_TI_FAULT_STATUS,
-	CP_TI_REG_STATUS,
-	CP_TI_SET_BUS_PROTECTION_FOR_QC3,
-};
-
-static const char * const cp_qc30_ext_ti_iio_chan[] = {
-	/* TI IIO Channels */
-	[CP_TI_BATTERY_VOLTAGE] = "battery_voltage",
-	[CP_TI_BATTERY_CURRENT] = "battery_current",
-	[CP_TI_BUS_VOLTAGE]	= "bus_voltage",
-	[CP_TI_BUS_CURRENT] = "bus_current",
-	[CP_TI_BUS_TEMPERATURE] = "bus_temp",
-	[CP_TI_BATTERY_TEMPERATURE] = "battery_temp",
-	[CP_TI_DIE_TEMPERATURE] = "die_temp",
-	[CP_TI_BATTERY_PRESENT] = "battery_preset",
-	[CP_TI_VBUS_PRESENT] = "vbus_present",
-	[CP_TI_BUS_ERROR_STATUS] = "bus_error_status",
-	[CP_TI_CHARGING_ENABLED] = "charging_enabled",
-	[CP_TI_ALARM_STATUS] = "alarm_status",
-	[CP_TI_FAULT_STATUS] = "fault_status",
-	[CP_TI_REG_STATUS] = "reg_status",
-	[CP_TI_SET_BUS_PROTECTION_FOR_QC3] = "bus_protection_qc3",
 };
 
 enum cp_qc30_ext_main_iio_channels {
@@ -230,10 +191,7 @@ static int cp_qc30_read_iio_prop(struct cp_qc30_data *chip,
 
 	switch (type) {
 	case CP_IIO_TI:
-		if (IS_ERR_OR_NULL(chip->iio_chan_list_cp_ti))
-			return -ENODEV;
-		iio_chan_list = chip->iio_chan_list_cp_ti[iio_chan];
-		break;
+		return ti_proxy_iio_read(iio_chan, val);
 	case CP_IIO_MAIN:
 		if (IS_ERR_OR_NULL(chip->iio_chan_list_cp_main))
 			return -ENODEV;
@@ -261,10 +219,7 @@ static int cp_qc30_write_iio_prop(struct cp_qc30_data *chip,
 
 	switch (type) {
 	case CP_IIO_TI:
-		if (IS_ERR_OR_NULL(chip->iio_chan_list_cp_ti))
-			return -ENODEV;
-		iio_chan_list = chip->iio_chan_list_cp_ti[iio_chan];
-		break;
+		return ti_proxy_iio_write(iio_chan, val);
 	case CP_IIO_MAIN:
 		if (IS_ERR_OR_NULL(chip->iio_chan_list_cp_main))
 			return -ENODEV;
@@ -291,25 +246,7 @@ static bool is_qc30_iio_available(struct cp_qc30_data *chip,
 
 	switch (type) {
 	case CP_IIO_TI:
-		if (IS_ERR(chip->iio_chan_list_cp_ti))
-			return false;
-
-		if (!chip->iio_chan_list_cp_ti) {
-			iio_list = get_ti_ext_channels(chip->dev,
-					cp_qc30_ext_ti_iio_chan,
-					ARRAY_SIZE(cp_qc30_ext_ti_iio_chan));
-			if (IS_ERR(iio_list)) {
-				rc = PTR_ERR(iio_list);
-				if (rc != -EPROBE_DEFER) {
-					dev_err(chip->dev,
-						"Failed to get CP_IIO_TI channels, rc=%d\n", rc);
-					chip->iio_chan_list_cp_ti = ERR_PTR(-EINVAL);
-				}
-				return false;
-			}
-			chip->iio_chan_list_cp_ti = iio_list;
-		}
-		break;
+		return ti_proxy_iio_available();
 	case CP_IIO_MAIN:
 		if (IS_ERR(chip->iio_chan_list_cp_main))
 			return false;
@@ -543,51 +480,51 @@ static void cp_update_fc_status(void)
 		return;
 
 	ret = cp_qc30_read_iio_prop(
-		the_chip, CP_IIO_TI, CP_TI_BATTERY_VOLTAGE, &val);
+		the_chip, CP_IIO_TI, PSY_IIO_TI_BATTERY_VOLTAGE, &val);
 	if (!ret)
 		pm_state.bq2597x.vbat_volt = val;
 
-	/*ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, CP_TI_BATTERY_CURRENT, &val);
+	/*ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, PSY_IIO_TI_BATTERY_CURRENT, &val);
 	if (!ret)
 		pm_state.bq2597x.ibat_curr = val; */
 
-	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, CP_TI_BUS_VOLTAGE,
+	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, PSY_IIO_TI_BUS_VOLTAGE,
 					&val);
 	if (!ret)
 		pm_state.bq2597x.vbus_volt = val;
 
-	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, CP_TI_BUS_CURRENT,
+	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, PSY_IIO_TI_BUS_CURRENT,
 					&val);
 	if (!ret)
 		pm_state.bq2597x.ibus_curr = val;
 
 	ret = cp_qc30_read_iio_prop(
-		the_chip, CP_IIO_TI, CP_TI_BUS_TEMPERATURE, &val);
+		the_chip, CP_IIO_TI, PSY_IIO_TI_BUS_TEMPERATURE, &val);
 	if (!ret)
 		pm_state.bq2597x.bus_temp = val;
 
 	ret = cp_qc30_read_iio_prop(
-		the_chip, CP_IIO_TI, CP_TI_BATTERY_TEMPERATURE, &val);
+		the_chip, CP_IIO_TI, PSY_IIO_TI_BATTERY_TEMPERATURE, &val);
 	if (!ret)
 		pm_state.bq2597x.bat_temp = val;
 
 	ret = cp_qc30_read_iio_prop(
-		the_chip, CP_IIO_TI, CP_TI_DIE_TEMPERATURE, &val);
+		the_chip, CP_IIO_TI, PSY_IIO_TI_DIE_TEMPERATURE, &val);
 	if (!ret)
 		pm_state.bq2597x.die_temp = val;
 
 	ret = cp_qc30_read_iio_prop(
-		the_chip, CP_IIO_TI, CP_TI_BATTERY_PRESENT, &val);
+		the_chip, CP_IIO_TI, PSY_IIO_TI_BATTERY_PRESENT, &val);
 	if (!ret)
 		pm_state.bq2597x.batt_pres = val;
 
-	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, CP_TI_VBUS_PRESENT,
+	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, PSY_IIO_TI_VBUS_PRESENT,
 					&val);
 	if (!ret)
 		pm_state.bq2597x.vbus_pres = val;
 
 	ret = cp_qc30_read_iio_prop(
-		the_chip, CP_IIO_TI, CP_TI_BUS_ERROR_STATUS, &val);
+		the_chip, CP_IIO_TI, PSY_IIO_TI_BUS_ERROR_STATUS, &val);
 	if (!ret)
 		pm_state.bq2597x.bus_error_status = val;
 
@@ -596,12 +533,12 @@ static void cp_update_fc_status(void)
 		pm_state.bq2597x.ibat_curr = pm_state.ibat_now;
 	}
 
-	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, CP_TI_CHARGING_ENABLED,
+	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, PSY_IIO_TI_CHARGING_ENABLED,
 					&val);
 	if (!ret)
 		pm_state.bq2597x.charge_enabled = val;
 
-	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, CP_TI_ALARM_STATUS,
+	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, PSY_IIO_TI_ALARM_STATUS,
 					&val);
 	if (!ret) {
 		pm_state.bq2597x.bat_ovp_alarm =
@@ -622,7 +559,7 @@ static void cp_update_fc_status(void)
 			!!(val & DIE_THERM_ALARM_MASK);
 	}
 
-	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, CP_TI_FAULT_STATUS,
+	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, PSY_IIO_TI_FAULT_STATUS,
 					&val);
 	if (!ret) {
 		pm_state.bq2597x.bat_ovp_fault =
@@ -641,7 +578,7 @@ static void cp_update_fc_status(void)
 			!!(val & DIE_THERM_FAULT_MASK);
 	}
 
-	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, CP_TI_REG_STATUS,
+	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, PSY_IIO_TI_REG_STATUS,
 					&val);
 	if (!ret) {
 		pm_state.bq2597x.vbat_reg =
@@ -659,7 +596,7 @@ static int cp_enable_fc(bool enable)
 		return -ENODEV;
 
 	val = enable;
-	ret = cp_qc30_write_iio_prop(the_chip, CP_IIO_TI, CP_TI_CHARGING_ENABLED,
+	ret = cp_qc30_write_iio_prop(the_chip, CP_IIO_TI, PSY_IIO_TI_CHARGING_ENABLED,
 					val);
 
 	return ret;
@@ -674,7 +611,7 @@ static int cp_set_qc_bus_protections(int hvdcp3_type)
 
 	val = hvdcp3_type;
 	ret = cp_qc30_write_iio_prop(
-		the_chip, CP_IIO_TI, CP_TI_SET_BUS_PROTECTION_FOR_QC3, val);
+		the_chip, CP_IIO_TI, PSY_IIO_TI_SET_BUS_PROTECTION_FOR_QC3, val);
 
 	return ret;
 }
@@ -714,7 +651,7 @@ static int cp_check_fc_enabled(void)
 	if (!is_qc30_iio_available(the_chip, CP_IIO_TI))
 		return -ENODEV;
 
-	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, CP_TI_CHARGING_ENABLED,
+	ret = cp_qc30_read_iio_prop(the_chip, CP_IIO_TI, PSY_IIO_TI_CHARGING_ENABLED,
 					&val);
 	if (!ret)
 		pm_state.bq2597x.charge_enabled = !!val;
@@ -1582,29 +1519,16 @@ static int cp_qc30_parse_dt(struct cp_qc30_data *chip)
 
 static void cp_qc30_iio_init(struct cp_qc30_data *chip)
 {
-	// struct iio_channel **iio_list;
 	bool ti, main,qg;
 
 	/* init ti iio channels*/
-	ti = is_qc30_iio_available(chip, CP_IIO_TI);//better way to handle is this?
-	// iio_list = get_ti_ext_channels(chip->dev,
-	// 	cp_qc30_ext_ti_iio_chan, ARRAY_SIZE(cp_qc30_ext_ti_iio_chan));
-	// if (!IS_ERR(iio_list))
-	// 	chip->iio_chan_list_cp_ti = iio_list;
+	ti = is_qc30_iio_available(chip, CP_IIO_TI);
 
 	/* init main charger iio channels*/
-	main = is_qc30_iio_available(chip, CP_IIO_MAIN);//better way to handle is this?
-	// iio_list = get_ti_ext_channels(chip->dev,
-	// 	cp_qc30_ext_main_iio_chan, ARRAY_SIZE(cp_qc30_ext_main_iio_chan));
-	// if (!IS_ERR(iio_list))
-	// 	chip->iio_chan_list_cp_main = iio_list;
+	main = is_qc30_iio_available(chip, CP_IIO_MAIN);
 
 	/* init fg4 iio channels */
-	qg = is_qc30_iio_available(chip, CP_IIO_QG);//better way to handle is this?
-	// iio_list = get_ti_ext_channels(chip->dev,
-	// 	cp_qc30_ext_qg_iio_chan, ARRAY_SIZE(cp_qc30_ext_qg_iio_chan));
-	// if (!IS_ERR(iio_list))
-	// 	chip->iio_chan_list_cp_qg = iio_list;
+	qg = is_qc30_iio_available(chip, CP_IIO_QG);
 
 	pr_info("cp_qc30_iio_init: ti=%d main=%d qg=%d\n", ti, main, qg);
 }

@@ -1,16 +1,20 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2025, Aman <duckyduckg65@gmail.com>
+ * Copyright (c) 2025-2026, Aman <duckyduckg65@gmail.com>
  */
 
 #ifndef __TI_CHARGER_IIO_H
 #define __TI_CHARGER_IIO_H
 
+#include <linux/device.h>
+#include <linux/slab.h>
 #include <linux/iio/consumer.h>
 #include <linux/iio/iio.h>
 #include <dt-bindings/iio/qti_power_supply_iio.h>
 
 struct ti_charger_iio {
+	struct device *dev;
+	struct iio_dev *indio_dev;
 	int (*ti_iio_read)(struct device *dev, int iio_chan, int *val);
 	int (*ti_iio_write)(struct device *dev, int iio_chan, int val);
 };
@@ -96,4 +100,16 @@ static inline struct iio_channel **get_ti_ext_channels(struct device *dev,
 
 	return iio_ch_ext;
 }
+
+////wip
+/* called by bq2597x / ln800 once they register as IIO device */
+int ti_proxy_iio_register(struct ti_charger_iio *master);
+void ti_proxy_iio_unregister(struct ti_charger_iio *master);
+
+/* direct calls for policy drivrs*/
+bool ti_proxy_iio_available(void);
+int ti_proxy_iio_read(int channel_num, int *val);
+int ti_proxy_iio_write(int channel_num, int val);
+
+////wip
 #endif
