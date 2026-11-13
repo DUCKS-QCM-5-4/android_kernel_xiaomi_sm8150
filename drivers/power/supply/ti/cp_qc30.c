@@ -83,11 +83,8 @@
 #define CP_ENABLE_FAIL 2
 #define TAPER_DONE 1
 
-#ifdef CONFIG_CHARGER_LN8000
-#define VBUS_COMP 250
-#else
-#define VBUS_COMP 150
-#endif
+#define VBUS_COMP_LN8000 250
+#define VBUS_COMP_DEFAULT 150
 
 enum {
 	VBUS_ERROR_NONE,
@@ -375,6 +372,14 @@ static struct power_supply *cp_get_usb_psy(void)
 		pm_state.usb_psy = power_supply_get_by_name("usb");
 
 	return pm_state.usb_psy;
+}
+
+static struct power_supply *cp_get_ln8k(void)
+{
+	if (!pm_state.ln8k)
+		pm_state.ln8k = power_supply_get_by_name("ln8000-standalone");
+
+	return pm_state.ln8k;
 }
 
 static int cp_get_effective_fcc_val(pm_t pm_state)
@@ -1048,6 +1053,8 @@ void cp_statemachine(unsigned int port)
 	static int tune_vbus_retry, tune_vbus_count, retry_enable_bq_count;
 	int thermal_level = 0;
 	static bool recovery;
+	struct power_supply *ln_psy;
+	int vbus_comp;
 
 	if (!pm_state.bq2597x.vbus_pres) {
 		pm_state.state = CP_STATE_DISCONNECT;
@@ -1254,11 +1261,13 @@ void cp_statemachine(unsigned int port)
 	case CP_STATE_FLASH2_ENTRY_1:
 		cp_update_fc_status();
 		if (sys_config.qc3p5_supported) {
+			ln_psy = cp_get_ln8k();
+			vbus_comp = ln_psy ? VBUS_COMP_LN8000 : VBUS_COMP_DEFAULT;
 			if (pm_state.bq2597x.bus_error_status ==
 				    VBUS_ERROR_LOW ||
 			    pm_state.bq2597x.vbus_volt <
 				    (pm_state.bq2597x.vbat_volt * 2 +
-				     VBUS_COMP)) {
+				     vbus_comp)) {
 				tune_vbus_retry = cp_get_qc_pulse_cnt();
 				tune_vbus_retry++;
 				cp_tune_vbus_volt(VOLT_UP);
@@ -1429,6 +1438,8 @@ void cp_statemachine(unsigned int port)
 
 static void cp_workfunc(struct work_struct *work)
 {
+	struct power_supply *ln_psy;
+
 	cp_get_usb_type();
 
 	cp_update_sw_status();
@@ -1441,10 +1452,12 @@ static void cp_workfunc(struct work_struct *work)
 	/* check whether usb is present */
 	if (pm_state.usb_present == 0) {
 		cp_set_qc_bus_protections(HVDCP3_NONE);
-#ifdef CONFIG_CHARGER_LN8000
+
+	ln_psy = cp_get_ln8k();
+	if (ln_psy)
 		pm_state.state = CP_STATE_DISCONNECT;
-#endif
-		return;
+
+	return;
 	}
 
 	if (pm_state.usb_type == QTI_POWER_SUPPLY_TYPE_USB_HVDCP_3) {
