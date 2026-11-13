@@ -187,6 +187,7 @@ And public attribution of xiaomi platforms(like J20S and so and)
 	};
 
         ln8000_charger: ln8000_charger@51 {
+		#io-channel-cells = <1>;
 		compatible = "lionsemi,ln8000";
 		reg = <0x51>;
 		ln8000_charger,irq_index = <296>;
@@ -250,8 +251,8 @@ And public attribution of xiaomi platforms(like J20S and so and)
 					<&pm8150b_fg PSY_IIO_FFC_TERMINATION_CURRENT>,
 					<&pm8150b_fg PSY_IIO_SHUTDOWN_DELAY_ENABLE>,
 					<&pm8150b_fg PSY_IIO_CONSTANT_CHARGE_VOLTAGE>,
-					<&bq25970_standalone PSY_IIO_TI_BATTERY_VOLTAGE>,
-					<&bq25970_standalone PSY_IIO_TI_CHARGING_ENABLED>;
+					<&ti_iio_proxy PSY_IIO_TI_BATTERY_VOLTAGE>,
+					<&ti_iio_proxy PSY_IIO_TI_CHARGING_ENABLED>;
 
 			io-channel-names = "mid_voltage",
 					"usb_in_voltage",
@@ -288,24 +289,25 @@ And public attribution of xiaomi platforms(like J20S and so and)
 };
 
 &soc {
-	cp_qc30 {
+	ti_iio_proxy: ti-iio-proxy {
+		compatible = "mi,ti-iio-proxy";
 		#io-channel-cells = <1>;
-		io-channels = <&bq25970_standalone PSY_IIO_TI_BATTERY_PRESENT>,
-				<&bq25970_standalone PSY_IIO_TI_VBUS_PRESENT>,
-				<&bq25970_standalone PSY_IIO_TI_BATTERY_VOLTAGE>,
-				<&bq25970_standalone PSY_IIO_TI_BATTERY_CURRENT>,
-				<&bq25970_standalone PSY_IIO_TI_BATTERY_TEMPERATURE>,
-				<&bq25970_standalone PSY_IIO_TI_BUS_VOLTAGE>,
-				<&bq25970_standalone PSY_IIO_TI_BUS_CURRENT>,
-				<&bq25970_standalone PSY_IIO_TI_BUS_TEMPERATURE>,
-				<&bq25970_standalone PSY_IIO_TI_DIE_TEMPERATURE>,
-				<&bq25970_standalone PSY_IIO_TI_ALARM_STATUS>,
-				<&bq25970_standalone PSY_IIO_TI_FAULT_STATUS>,
-				<&bq25970_standalone PSY_IIO_TI_REG_STATUS>,
-				<&bq25970_standalone PSY_IIO_TI_SET_BUS_PROTECTION_FOR_QC3>,
-				<&bq25970_standalone PSY_IIO_TI_BUS_ERROR_STATUS>,
-				<&bq25970_standalone PSY_IIO_TI_CHARGING_ENABLED>,
-				<&pm8150b_charger PSY_IIO_USB_REAL_TYPE>,
+		status = "ok";
+	};
+
+	cp_qc30 {
+		compatible = "xiaomi,cp-qc30";
+		status = "ok";
+		mi,qc3-bat-volt-max = <4420>;
+		mi,qc3-bat-curr-max = <3600>;
+		mi,qc3-bus-volt-max = <12000>;
+		mi,qc3-bus-curr-max = <2100>;
+		mi,qc3-battery-warm-th = <450>;
+		mi,use-qcom-gauge;
+		//mi,cp-sec-enable;
+		#io-channel-cells = <1>;
+
+		io-channels =   <&pm8150b_charger PSY_IIO_USB_REAL_TYPE>,
 				<&pm8150b_charger PSY_IIO_BATTERY_CHARGING_LIMITED>,
 				<&pm8150b_charger PSY_IIO_BATTERY_CHARGING_ENABLED>,
 				<&pm8150b_charger PSY_IIO_TI_DP_DM>,
@@ -317,22 +319,7 @@ And public attribution of xiaomi platforms(like J20S and so and)
 				<&pm8150b_fg PSY_IIO_CAPACITY>,
 				<&pm8150b_fg PSY_IIO_FASTCHARGE_MODE>;
 
-		io-channel-names = "battery_preset",
-				"vbus_present",
-				"battery_voltage",
-				"battery_current",
-				"battery_temp",
-				"bus_voltage",
-				"bus_current",
-				"bus_temp",
-				"die_temp",
-				"alarm_status",
-				"fault_status",
-				"reg_status",
-				"bus_protection_qc3",
-				"bus_error_status",
-				"charging_enabled",
-				"real_type",
+		io-channel-names = "real_type",
 				"bat_charging_limit",
 				"bat_charging_enabled",
 				"dp_dm_bq",
@@ -343,34 +330,24 @@ And public attribution of xiaomi platforms(like J20S and so and)
 				"current_now",
 				"capacity",
 				"bq_fastcharge_mode";
-
-		compatible = "xiaomi,cp-qc30";
-		status = "ok";
-		mi,qc3-bat-volt-max = <4420>;
-		mi,qc3-bat-curr-max = <3600>;
-		mi,qc3-bus-volt-max = <12000>;
-		mi,qc3-bus-curr-max = <2100>;
-		mi,qc3-battery-warm-th = <450>;
-		mi,use-qcom-gauge;
-		//mi,cp-sec-enable;
 	};
 
 	usbpd_pm {
 		compatible = "xiaomi,usbpd-pm";
+		status = "ok";
+		mi,pd-bat-volt-max = <4500>;
+		mi,pd-ffc-bat-volt-max = <4480>;
+		mi,pd-bat-curr-max = <6000>;
+		mi,pd-bus-volt-max = <12000>;
+		mi,pd-bus-curr-max = <3000>;
+		mi,pd-non-ffc-bat-volt-max = <4450>;
+		mi,pd-bus-curr-compensate  = <0>;
+		mi,pd-battery-warm-th = <450>;
+		mi,use-qcom-gauge;
+		//mi,cp-sec-enable;
 		#io-channel-cells = <1>;
-		io-channels = <&bq25970_standalone PSY_IIO_TI_BATTERY_PRESENT>,
-				<&bq25970_standalone PSY_IIO_TI_VBUS_PRESENT>,
-				<&bq25970_standalone PSY_IIO_TI_BATTERY_VOLTAGE>,
-				<&bq25970_standalone PSY_IIO_TI_BATTERY_TEMPERATURE>,
-				<&bq25970_standalone PSY_IIO_TI_BUS_VOLTAGE>,
-				<&bq25970_standalone PSY_IIO_TI_BUS_CURRENT>,
-				<&bq25970_standalone PSY_IIO_TI_BUS_TEMPERATURE>,
-				<&bq25970_standalone PSY_IIO_TI_DIE_TEMPERATURE>,
-				<&bq25970_standalone PSY_IIO_TI_ALARM_STATUS>,
-				<&bq25970_standalone PSY_IIO_TI_FAULT_STATUS>,
-				<&bq25970_standalone PSY_IIO_TI_REG_STATUS>,
-				<&bq25970_standalone PSY_IIO_TI_CHARGING_ENABLED>,
-				<&pm8150b_charger PSY_IIO_BATTERY_CHARGING_LIMITED>,
+
+		io-channels =   <&pm8150b_charger PSY_IIO_BATTERY_CHARGING_LIMITED>,
 				<&pm8150b_charger PSY_IIO_BATTERY_CHARGING_ENABLED>,
 				<&pm8150b_charger PSY_IIO_BQ_INPUT_SUSPEND>,
 				<&pm8150b_charger PSY_IIO_SLOWLY_CHARGING>,
@@ -383,19 +360,7 @@ And public attribution of xiaomi platforms(like J20S and so and)
 				<&pm8150b_fg PSY_IIO_CAPACITY>,
 				<&pm8150b_fg PSY_IIO_FASTCHARGE_MODE>;
 
-		io-channel-names = "battery_preset",
-				"vbus_present",
-				"battery_voltage",
-				"battery_temp",
-				"bus_voltage",
-				"bus_current",
-				"bus_temp",
-				"die_temp",
-				"alarm_status",
-				"fault_status",
-				"reg_status",
-				"charging_enabled",
-				"bat_charging_limit",
+		io-channel-names = "bat_charging_limit",
 				"bat_charging_enabled",
 				"bq_input_suspend",
 				"slowly_charging",
@@ -407,18 +372,6 @@ And public attribution of xiaomi platforms(like J20S and so and)
 				"current_now",
 				"capacity",
 				"bq_fastcharge_mode";
-
-		status = "ok";
-		mi,pd-bat-volt-max = <4500>;
-		mi,pd-ffc-bat-volt-max = <4480>;
-		mi,pd-bat-curr-max = <6000>;
-		mi,pd-bus-volt-max = <12000>;
-		mi,pd-bus-curr-max = <3000>;
-		mi,pd-non-ffc-bat-volt-max = <4450>;
-		mi,pd-bus-curr-compensate  = <0>;
-		mi,pd-battery-warm-th = <450>;
-		mi,use-qcom-gauge;
-		//mi,cp-sec-enable;
 	};
 
 	onewire_gpio: onewire_gpio {
@@ -454,7 +407,7 @@ And public attribution of xiaomi platforms(like J20S and so and)
 
 &pm8150b_fg {
 	#io-channel-cells = <1>;
-	io-channels = <&bq25970_standalone PSY_IIO_TI_CHARGING_ENABLED>,
+	io-channels = <&ti_iio_proxy PSY_IIO_TI_CHARGING_ENABLED>,
 				<&pm8150b_charger PSY_IIO_CHARGE_DONE>,
 				<&pm8150b_charger PSY_IIO_RECHARGE_SOC>;
 	io-channel-names = "cp_charging_enabled",
