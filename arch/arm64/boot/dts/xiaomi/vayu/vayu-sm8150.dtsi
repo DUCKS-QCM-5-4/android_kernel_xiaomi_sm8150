@@ -190,7 +190,8 @@ And public attribution of xiaomi platforms(like J20S and so and)
 		#io-channel-cells = <1>;
 		compatible = "lionsemi,ln8000";
 		reg = <0x51>;
-		ln8000_charger,irq_index = <296>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <10 0x2002>;
 		/* device configuration */
 		ln8000_charger,bat-ovp-threshold = <4560>;
                 ln8000_charger,bat-ovp-alarm-threshold = <4525>;
