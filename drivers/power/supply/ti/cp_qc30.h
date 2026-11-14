@@ -253,4 +253,7 @@ struct sys_config {
 	bool qc3p5_supported;
 };
 
+int cp_qc30_init(void);
+void cp_qc30_exit(void);
+
 #endif /* SRC_PDLIB_USB_PD_POLICY_MANAGER_H_ */

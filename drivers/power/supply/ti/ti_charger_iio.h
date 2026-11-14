@@ -8,6 +8,8 @@
 
 #include <linux/device.h>
 #include <linux/slab.h>
+#include <linux/i2c.h>
+#include <linux/platform_device.h>
 #include <linux/iio/consumer.h>
 #include <linux/iio/iio.h>
 #include <dt-bindings/iio/qti_power_supply_iio.h>
@@ -111,5 +113,23 @@ bool ti_proxy_iio_available(void);
 int ti_proxy_iio_read(int channel_num, int *val);
 int ti_proxy_iio_write(int channel_num, int val);
 
+extern struct i2c_driver bq2597x_charger_driver;
+#ifdef CONFIG_CHARGER_LN8000
+extern struct i2c_driver ln8000_driver;
+#endif
+extern struct platform_driver ti_iio_proxy_driver;
+extern struct platform_driver usbpd_pm_driver;
+extern struct platform_driver cp_qc30_driver;
+
+int bq2597x_charger_init(void);
+void bq2597x_charger_exit(void);
+#ifdef CONFIG_CHARGER_LN8000
+int ln8000_charger_init(void);
+void ln8000_charger_exit(void);
+#endif
+int usbpd_pm_init(void);
+void usbpd_pm_exit(void);
+int cp_qc30_init(void);
+void cp_qc30_exit(void);
 ////wip
 #endif

@@ -348,4 +348,7 @@ int bq2597x_set_fault_int_mask(struct bq2597x *bq, u8 mask);
 int bq2597x_clear_fault_int_mask(struct bq2597x *bq, u8 mask);
 void bq2597x_dump_reg(struct bq2597x *bq);
 
+int bq2597x_charger_init(void);
+void bq2597x_charger_exit(void);
+
 #endif

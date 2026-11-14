@@ -241,4 +241,7 @@ extern int usbpd_fetch_pdo(struct usbpd *pd, struct usbpd_pdo *pdos);
 extern int usbpd_select_pdo(struct usbpd *pd, int pdo, int uv, int ua);
 extern struct usbpd *smb_get_usbpd(void);
 
+int usbpd_pm_init(void);
+void usbpd_pm_exit(void);
+
 #endif /* SRC_PDLIB_USB_PD_POLICY_MANAGER_H_ */

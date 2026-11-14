@@ -1562,6 +1562,11 @@ static int usbpd_pm_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct usbpd_pm *pdpm;
 
+	if (!ti_proxy_iio_available()) {
+		pr_debug("TI IIO proxy driver not ready yet, deferring probe\n");
+		return -EPROBE_DEFER;
+	}
+
 	pr_info("%s enter\n", __func__);
 
 	pdpm = kzalloc(sizeof(struct usbpd_pm), GFP_KERNEL);
@@ -1618,7 +1623,7 @@ static const struct of_device_id usbpd_pm_of_match[] = {
 	{},
 };
 
-static struct platform_driver usbpd_pm_driver = {
+struct platform_driver usbpd_pm_driver = {
 	.driver = {
 		.name = "usbpd-pm",
 		.owner = THIS_MODULE,
@@ -1628,18 +1633,15 @@ static struct platform_driver usbpd_pm_driver = {
 	.remove = usbpd_pm_remove,
 };
 
-static int __init usbpd_pm_init(void)
+int usbpd_pm_init(void)
 {
 	return platform_driver_register(&usbpd_pm_driver);
 }
 
-late_initcall(usbpd_pm_init);
-
-static void __exit usbpd_pm_exit(void)
+void usbpd_pm_exit(void)
 {
-	return platform_driver_unregister(&usbpd_pm_driver);
+	platform_driver_unregister(&usbpd_pm_driver);
 }
-module_exit(usbpd_pm_exit);
 
 MODULE_AUTHOR("Fei Jiang<jiangfei1@xiaomi.com>");
 MODULE_DESCRIPTION("Xiaomi usb pd statemachine for bq");
