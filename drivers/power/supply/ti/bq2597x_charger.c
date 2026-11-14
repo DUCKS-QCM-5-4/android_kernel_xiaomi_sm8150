@@ -2292,7 +2292,7 @@ static const struct i2c_device_id bq2597x_charger_id[] = {
 	{},
 };
 
-static struct i2c_driver bq2597x_charger_driver = {
+struct i2c_driver bq2597x_charger_driver = {
 	.driver		= {
 		.name	= "bq2597x-charger",
 		.owner	= THIS_MODULE,
@@ -2306,7 +2306,15 @@ static struct i2c_driver bq2597x_charger_driver = {
 	.shutdown	= bq2597x_charger_shutdown,
 };
 
-module_i2c_driver(bq2597x_charger_driver);
+int bq2597x_charger_init(void)
+{
+	return i2c_add_driver(&bq2597x_charger_driver);
+}
+
+void bq2597x_charger_exit(void)
+{
+	i2c_del_driver(&bq2597x_charger_driver);
+}
 
 MODULE_DESCRIPTION("TI BQ2597x Charger Driver");
 MODULE_LICENSE("GPL v2");

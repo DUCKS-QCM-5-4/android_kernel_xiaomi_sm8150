@@ -349,4 +349,7 @@ struct ln8000_info {
 	u32 debug_address;
 };
 
+int ln8000_charger_init(void);
+void ln8000_charger_exit(void);
+
 #endif /* __LN8000_CHARGER_H__ */

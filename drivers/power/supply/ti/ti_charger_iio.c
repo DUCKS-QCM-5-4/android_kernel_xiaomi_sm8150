@@ -20,6 +20,7 @@ struct ti_iio_proxy {
 
 static DEFINE_MUTEX(g_ti_lock);
 static struct ti_charger_iio *g_ti_proxy;
+static bool g_ti_proxy_ready;
 
 int ti_proxy_iio_register(struct ti_charger_iio *master)
 {
@@ -39,8 +40,10 @@ EXPORT_SYMBOL(ti_proxy_iio_register);
 void ti_proxy_iio_unregister(struct ti_charger_iio *master)
 {
 	mutex_lock(&g_ti_lock);
-	if (g_ti_proxy == master)
+	if (g_ti_proxy == master) {
 		g_ti_proxy = NULL;
+		g_ti_proxy_ready = false;
+	}
 	mutex_unlock(&g_ti_lock);
 }
 EXPORT_SYMBOL(ti_proxy_iio_unregister);
@@ -50,7 +53,8 @@ bool ti_proxy_iio_available(void)
 	bool avail;
 
 	mutex_lock(&g_ti_lock);
-	avail = (g_ti_proxy != NULL && g_ti_proxy->dev != NULL);
+	avail = (g_ti_proxy != NULL && g_ti_proxy->dev != NULL &&
+		 g_ti_proxy_ready);
 	mutex_unlock(&g_ti_lock);
 
 	return avail;
@@ -147,9 +151,14 @@ static int ti_iio_proxy_probe(struct platform_device *pdev)
 	struct iio_dev *indio_dev;
 	struct iio_chan_spec *chan;
 	int num_chans = ARRAY_SIZE(ti_charger_iio_psy_channels);
+	bool master_ready;
 	int rc, i;
 
-	if (!ti_proxy_iio_available()) {
+	mutex_lock(&g_ti_lock);
+	master_ready = (g_ti_proxy != NULL && g_ti_proxy->dev != NULL);
+	mutex_unlock(&g_ti_lock);
+
+	if (!master_ready) {
 		pr_debug("Master Charger not ready yet, deferring probe\n");
 		return -EPROBE_DEFER;
 	}
@@ -196,6 +205,10 @@ static int ti_iio_proxy_probe(struct platform_device *pdev)
 		return rc;
 	}
 
+	mutex_lock(&g_ti_lock);
+	g_ti_proxy_ready = true;
+	mutex_unlock(&g_ti_lock);
+
 	dev_info(&pdev->dev, "Bound to master %s (%d channels)\n",
 		 g_ti_proxy->indio_dev->name, num_chans);
 	return 0;
@@ -206,14 +219,147 @@ static const struct of_device_id ti_iio_proxy_match_table[] = {
 	{},
 };
 
-static struct platform_driver ti_iio_proxy_driver = {
+struct platform_driver ti_iio_proxy_driver = {
 	.driver = {
 		.name = "ti-iio-proxy",
 		.of_match_table = ti_iio_proxy_match_table,
 	},
 	.probe = ti_iio_proxy_probe,
 };
-module_platform_driver(ti_iio_proxy_driver);
+
+static int ti_iio_proxy_init(void)
+{
+	return platform_driver_register(&ti_iio_proxy_driver);
+}
+
+static void ti_iio_proxy_exit(void)
+{
+	platform_driver_unregister(&ti_iio_proxy_driver);
+}
+
+struct ti_charger_submodule_component {
+	int (*init)(void);
+	void (*exit)(void);
+};
+
+struct ti_charger_submodule {
+	char *name;
+	uint num_component;
+	const struct ti_charger_submodule_component *component;
+};
+
+static const struct ti_charger_submodule_component ti_master_ic[] = {
+	{&bq2597x_charger_init, &bq2597x_charger_exit},
+#ifdef CONFIG_CHARGER_LN8000
+	{&ln8000_charger_init, &ln8000_charger_exit},
+#endif
+};
+
+static const struct ti_charger_submodule_component ti_proxy_driver[] = {
+	{&ti_iio_proxy_init, &ti_iio_proxy_exit},
+};
+
+static const struct ti_charger_submodule_component ti_policy_driver[] = {
+	{&usbpd_pm_init, &usbpd_pm_exit},
+	{&cp_qc30_init, &cp_qc30_exit},
+};
+
+static const struct ti_charger_submodule submodule_table[] = {
+	{
+		.name = "TI Charge Pump IC",
+		.num_component = ARRAY_SIZE(ti_master_ic),
+		.component = ti_master_ic,
+	},
+	{
+		.name = "TI IIO Proxy",
+		.num_component = ARRAY_SIZE(ti_proxy_driver),
+		.component = ti_proxy_driver,
+	},
+	{
+		.name = "TI Policy Manager",
+		.num_component = ARRAY_SIZE(ti_policy_driver),
+		.component = ti_policy_driver,
+	},
+};
+
+static int ti_charger_verify_submodules(void)
+{
+	int rc = 0;
+	int i, j, num_components;
+
+	for (i = 0; i < ARRAY_SIZE(submodule_table); i++) {
+		num_components = submodule_table[i].num_component;
+		for (j = 0; j < num_components; j++) {
+			if (!submodule_table[i].component[j].init ||
+			    !submodule_table[i].component[j].exit) {
+				pr_err("%s module has init = %ps, exit = %ps\n",
+				       submodule_table[i].name,
+				       submodule_table[i].component[j].init,
+				       submodule_table[i].component[j].exit);
+				rc = -EINVAL;
+				goto end;
+			}
+		}
+	}
+
+end:
+	return rc;
+}
+
+static void __ti_charger_exit(int i, int j)
+{
+	uint num_exits;
+
+	for (j -= 1; j >= 0; j--)
+		submodule_table[i].component[j].exit();
+
+	for (i -= 1; i >= 0; i--) {
+		num_exits = submodule_table[i].num_component;
+		for (j = num_exits - 1; j >= 0; j--)
+			submodule_table[i].component[j].exit();
+	}
+}
+
+static int __init ti_charger_main_init(void)
+{
+	int rc;
+	uint i, j, num_inits;
+
+	rc = ti_charger_verify_submodules();
+	if (rc)
+		goto end_init;
+
+	for (i = 0; i < ARRAY_SIZE(submodule_table); i++) {
+		num_inits = submodule_table[i].num_component;
+		pr_debug("Number of %s components: %u\n",
+			 submodule_table[i].name, num_inits);
+		for (j = 0; j < num_inits; j++) {
+			rc = submodule_table[i].component[j].init();
+			if (rc) {
+				pr_err("%s module failure at %ps rc = %d\n",
+				       submodule_table[i].name,
+				       submodule_table[i].component[j].init,
+				       rc);
+				__ti_charger_exit(i, j);
+				goto end_init;
+			}
+		}
+	}
+
+	pr_info("TI charger initcalls done\n");
+
+end_init:
+	return rc;
+}
+
+static void __exit ti_charger_main_exit(void)
+{
+	__ti_charger_exit(ARRAY_SIZE(submodule_table), 0);
+	pr_info("TI charger driver exited!\n");
+}
+
+module_init(ti_charger_main_init);
+module_exit(ti_charger_main_exit);
 
 MODULE_DESCRIPTION("wip");
 MODULE_AUTHOR("Aman <duckyduckg65@gmail.com>");

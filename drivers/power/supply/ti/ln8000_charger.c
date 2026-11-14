@@ -1954,7 +1954,7 @@ static const struct dev_pm_ops ln8000_pm_ops = {
 };
 #endif
 
-static struct i2c_driver ln8000_driver = {
+struct i2c_driver ln8000_driver = {
     .driver   = {
         .name = "ln8000_charger",
         .owner = THIS_MODULE,
@@ -1968,7 +1968,16 @@ static struct i2c_driver ln8000_driver = {
     .shutdown = ln8000_shutdown,
     .id_table = ln8000_id,
 };
-module_i2c_driver(ln8000_driver);
+
+int ln8000_charger_init(void)
+{
+	return i2c_add_driver(&ln8000_driver);
+}
+
+void ln8000_charger_exit(void)
+{
+	i2c_del_driver(&ln8000_driver);
+}
 
 MODULE_AUTHOR("sungdae choi<sungdae@lionsemi.com>");
 MODULE_DESCRIPTION("LIONSEMI LN8000 charger driver");

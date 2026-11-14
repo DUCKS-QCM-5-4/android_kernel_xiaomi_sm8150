@@ -1539,6 +1539,11 @@ static int cp_qc30_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct cp_qc30_data *chip;
 
+	if (!ti_proxy_iio_available()) {
+		pr_debug("TI IIO proxy driver not ready yet, deferring probe\n");
+		return -EPROBE_DEFER;
+	}
+
 	pr_info("%s enter\n", __func__);
 
 	chip = devm_kzalloc(dev, sizeof(struct cp_qc30_data), GFP_KERNEL);
@@ -1585,7 +1590,7 @@ static const struct of_device_id cp_qc30_of_match[] = {
 	{},
 };
 
-static struct platform_driver cp_qc30_driver = {
+struct platform_driver cp_qc30_driver = {
 	.driver = {
 		.name = "cp-qc30",
 		.owner = THIS_MODULE,
@@ -1595,18 +1600,15 @@ static struct platform_driver cp_qc30_driver = {
 	.remove = cp_qc30_remove,
 };
 
-static int __init cp_qc30_init(void)
+int cp_qc30_init(void)
 {
 	return platform_driver_register(&cp_qc30_driver);
 }
 
-late_initcall(cp_qc30_init);
-
-static void __exit cp_qc30_exit(void)
+void cp_qc30_exit(void)
 {
-	return platform_driver_unregister(&cp_qc30_driver);
+	platform_driver_unregister(&cp_qc30_driver);
 }
-module_exit(cp_qc30_exit);
 
 MODULE_AUTHOR("Fei Jiang<jiangfei1@xiaomi.com>");
 MODULE_DESCRIPTION("Xiaomi cp qc30");
