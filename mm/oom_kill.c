@@ -1255,7 +1255,6 @@ SYSCALL_DEFINE2(process_mrelease, int, pidfd, unsigned int, flags)
 	struct mm_struct *mm = NULL;
 	struct task_struct *task;
 	struct task_struct *p;
-	unsigned int f_flags;
 	bool reap = false;
 	struct pid *pid;
 	long ret = 0;
@@ -1263,7 +1262,7 @@ SYSCALL_DEFINE2(process_mrelease, int, pidfd, unsigned int, flags)
 	if (flags)
 		return -EINVAL;
 
-	pid = pidfd_get_pid(pidfd, &f_flags);
+	pid = pidfd_get_pid(pidfd);
 	if (IS_ERR(pid))
 		return PTR_ERR(pid);
 
